@@ -38,3 +38,31 @@ gplot + geom_hline(yintercept=0.7) + facet_wrap(~Species,ncol=4)
 
 objplot(iBulk.LFM~Midday.mean,data=lw,pch=19)
 abline(fit)
+
+## barplots of species traits
+(bulkLFM <- tapply(lw$Bulk.LFM,lw$Species,mean,na.rm=T))
+
+spMeans <- data.frame(BulkLFM=bulkLFM,LeafLFM=NA,StemLFM=NA,PredawnWP=NA,MiddayWP=NA,WPdiff=NA)
+rownames(spMeans) <- names(bulkLFM)
+spMeans$LeafLFM <- tapply(lw$Leaf.LFM,lw$Species,mean,na.rm=T)
+spMeans$StemLFM <- tapply(lw$Stem.LFM,lw$Species,mean,na.rm=T)
+spMeans$PredawnWP <- tapply(lw$Predawn.mean,lw$Species,mean,na.rm=T)
+spMeans$MiddayWP <- tapply(lw$Midday.mean,lw$Species,mean,na.rm=T)
+spMeans$WPdiff <- tapply(lw$WPdiff,lw$Species,mean,na.rm=T)
+spMeans <- spMeans[order(spMeans$BulkLFM),]
+
+op=par(mfrow=c(2,3))
+barplot(spMeans$BulkLFM,main='Bulk LFM')
+barplot(spMeans$LeafLFM,main='Leaf LFM')
+barplot(spMeans$StemLFM,main='Stem LFM')
+barplot(spMeans$PredawnWP,main='Predawn WP')
+barplot(spMeans$MiddayWP,main='Midday WP')
+barplot(spMeans$WPdiff,main='WP differential')
+par(op)
+
+rownames(spMeans)
+spMeans$spCodes <- c('Cc','Af','Qr','Qd','Cp','Qg','Qa','Qk','Ha','Uc','Am','Pm','Bp')
+
+pairs(spMeans)
+plot(spMeans$MiddayWP,spMeans$BulkLFM,type='n')
+text(spMeans$MiddayWP,spMeans$BulkLFM,labels=spMeans$spCodes)
