@@ -40,3 +40,6 @@ vignettes/*.pdf
 
 # Mac Finder files
 .DS_Store
+
+# Google doc files
+.gdoc
