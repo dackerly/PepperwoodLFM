@@ -40,7 +40,7 @@ gploti <- ggplot(lw) +
 
 print(gploti)
 print(gploti) + geom_hline(yintercept=1/0.7)
-gplot + facet_wrap(~Species,ncol=4)
+gploti + facet_wrap(~Species,ncol=4)
 
 # not inverse
 xbp <- which(lw$Species=='BACPIL')
@@ -61,7 +61,7 @@ print(gplot) + geom_hline(yintercept=0.7)
 
 gplot + facet_wrap(~Species,ncol=4)
 
-objplot(iBulk.LFM~Midday.mean,data=lw,pch=19)
+plot(Bulk.LFM~Midday.mean,data=lw,pch=19)
 abline(fit)
 
 ## barplots of species traits
@@ -89,7 +89,7 @@ barplot(spMeans$PredawnWP,main='Predawn WP',names.arg = spMeans$sp2, ylim=c(-6.5
 barplot(spMeans$WPdiff,main='WP differential',names.arg = spMeans$sp2)
 par(op)
 
-pairs(spMeans)
+pairs(spMeans[,1:6])
 plot(spMeans$MiddayWP,spMeans$BulkLFM,type='n')
 text(spMeans$MiddayWP,spMeans$BulkLFM,labels=spMeans$sp6)
 
