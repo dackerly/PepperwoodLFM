@@ -2,7 +2,6 @@
 # clear workspace
 rm(list=ls())
 
-
 # The following packaged need to be installed the following functions to work: "RCurl", "data.table","picante"
 library("RCurl")
 library("data.table")
@@ -16,7 +15,8 @@ source_https <- function(url, ...) {
   })
 }
 
-
 # sources in all functions (described below) that allow access to the PPW Vegetation Plot Data
 source_https('https://raw.githubusercontent.com/dackerly/PepperwoodVegPlots/master/Analyses/PWfunctions_GitHub.R')
 
+xx <- get.plot()
+xx
