@@ -43,3 +43,8 @@ vignettes/*.pdf
 
 # Google doc files
 .gdoc
+
+# Reports directory
+Reports/
+Reports/*.*
+Reports
