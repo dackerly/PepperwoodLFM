@@ -2,7 +2,7 @@
 rm(list=ls())
 library(ggplot2)
 
-lw <- read.csv('data/PWD_Oct2021_LFM_WP_Calcs.csv',as.is=T)
+lw <- read.csv('data/PWD_Oct2021+Jun2021_LFM_WP_Calcs.csv',as.is=T)
 str(lw)
 
 # for analysis, remove one sample of Baccharis that had no LFM
@@ -14,24 +14,33 @@ write.csv(table(lw$Species,lw$Site),'results/sampletable.csv')
 table(lw$Species,lw$Site)
 nrow(lw)
 
+# ID rows
+rOct <- which(lw$Sampling=='Oct21')
+rJun <- which(lw$Sampling=='Jun22')
+
 # Quick look!
-plot(lw$Midday.mean,lw$Bulk.LFM)
+plot(lw$Midday.mean,lw$Bulk.LFM,pch=19,col='red')
+points(lw$Midday.mean[rJun],lw$Bulk.LFM[rJun],pch=19,col='green')
 
 ## compare to Pivovaroff study
 p <- read.csv('data/other_studies/Pivovaroff_WP_vs_LFM.csv',as.is=T)
 head(p)
 p$bulkLFM <- p$LFM_./100
 
+minX <- min(c(p$WP_md_MPa,lw$Midday.mean),na.rm=T)
+maxX <- max(c(p$WP_md_MPa,lw$Midday.mean),na.rm=T)
+
 par(mar=c(5,5,1,1))
-plot(p$WP_md_MPa,p$bulkLFM,pch=19, xlab='Midday water potential (MPa)',ylab='Bulk live fuel moisture',cex.lab=2)
-points(lw$Midday.mean,lw$Leaf.LFM,pch=19,col='red',cex=2)
+plot(p$WP_md_MPa,p$bulkLFM,pch=19, xlab='Midday water potential (MPa)',ylab='Bulk live fuel moisture',cex.lab=2,xlim=c(minX,maxX))
+points(lw$Midday.mean,lw$Bulk.LFM,pch=19,col='red',cex=1.5)
 legend(-7,2.5,legend = c('Pivovaroff','this study'),fill = c('black','red'),cex = 2)
 
 # plotting inverse of LFM makes it fairly linear
 lw$iBulk.LFM <- 1/lw$Bulk.LFM
-plot(lw$Midday.mean,1/lw$iBulk.LFM,log='')
+plot(lw$Midday.mean,lw$iBulk.LFM,log='')
 
 ifit <- lm(iBulk.LFM~Midday.mean,data=lw)
+abline(ifit)
 
 gploti <- ggplot(lw) + 
   geom_point(aes(x=Midday.mean, y=iBulk.LFM,color=Species)) +
@@ -64,6 +73,10 @@ gplot + facet_wrap(~Species,ncol=4)
 plot(Bulk.LFM~Midday.mean,data=lw,pch=19)
 abline(fit)
 
+###############
+# From here down, needs to be redone separating October and June ##
+##########
+
 ## barplots of species traits
 (bulkLFM <- tapply(lw$Bulk.LFM,lw$Species,mean,na.rm=T))
 
@@ -92,6 +105,7 @@ par(op)
 pairs(spMeans[,1:6])
 plot(spMeans$MiddayWP,spMeans$BulkLFM,type='n')
 text(spMeans$MiddayWP,spMeans$BulkLFM,labels=spMeans$sp6)
+
 
 
 

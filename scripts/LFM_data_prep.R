@@ -38,7 +38,12 @@ lw2$Stem.wet <- NA
 lw2$Stem.dry <- NA
 lw2$Stem.change <- NA
 
-names(lw)==names(lw2)
+# reverse sign of water potentials in June data
+lw2$Predawn.mean <- (-1)*lw2$Predawn.mean
+lw2$Midday.mean <- (-1)*lw2$Midday.mean
+
+# check all columns aligned
+all(names(lw)==names(lw2))
 
 lw <- rbind(lw,lw2)
 dim(lw)
@@ -56,3 +61,4 @@ lw$WPdiff <- lw$Midday.mean-lw$Predawn.mean
 
 # Now write results to new file for continuing analysis
 write.csv(lw,'data/PWD_Oct2021+Jun2021_LFM_WP_Calcs.csv')
+
