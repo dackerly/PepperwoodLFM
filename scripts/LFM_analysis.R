@@ -7,6 +7,7 @@ str(lw)
 
 # for analysis, remove one sample of Baccharis that had no LFM
 lw <- lw[-which(is.na(lw$Bulk.LFM)),]
+lw$Species[which(lw$Species=='CEATHY')] <- 'CEAPAR'
 
 # sample sizes
 table(lw$Species)
@@ -20,7 +21,7 @@ rJun <- which(lw$Sampling=='Jun22')
 
 # Quick look!
 plot(lw$Midday.mean,lw$Bulk.LFM,pch=19,col='red')
-points(lw$Midday.mean[rJun],lw$Bulk.LFM[rJun],pch=19,col='green')
+points(lw$Midday.mean[rJun],lw$Bulk.LFM[rJun],pch=19,col='blue')
 
 ## compare to Pivovaroff study
 p <- read.csv('data/other_studies/Pivovaroff_WP_vs_LFM.csv',as.is=T)
@@ -51,7 +52,24 @@ print(gploti)
 print(gploti) + geom_hline(yintercept=1/0.7)
 gploti + facet_wrap(~Species,ncol=4)
 
-# not inverse
+# analog to PV curves
+plot(I(-1/(lw$Midday.mean))~I(1-lw$Bulk.LFM))
+#plot(I(-1/(lw$Midday.mean))~I(1-lw$Bulk.LFM))
+
+## Combine our data and P for individual species
+par(mar=c(5,5,3,1))
+spSel <- c('ADEFAS','ADFA')
+spSel <- c('HETARB','HEAR')
+spSel <- c('QUEAGRI','QUAG')
+
+r1 <- which(lw$Species==spSel[1])
+r2 <- which(p$Species==spSel[2])
+xlims <- c(min(c(lw$Midday.mean[r1],p$WP_md_MPa[r2]),na.rm=T),max(c(lw$Midday.mean[r1],p$WP_md_MPa[r2]),na.rm=T))
+ylims <- c(min(c(lw$Bulk.LFM[r1],p$bulkLFM[r2]),na.rm=T),max(c(lw$Bulk.LFM[r1],p$bulkLFM[r2]),na.rm=T))
+plot(lw$Midday.mean[r1],lw$Bulk.LFM[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[1])
+points(p$WP_md_MPa[r2],p$bulkLFM[r2],col='red')
+
+# not inverse analyses
 xbp <- which(lw$Species=='BACPIL')
 
 #choose whether to use all points or without bacpil
