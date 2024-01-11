@@ -2,15 +2,16 @@
 rm(list=ls())
 library(ggplot2)
 
-lw <- read.csv('data/PWD_Oct2021+Jun2021_LFM_WP_Calcs.csv',as.is=T)
+lw <- read.csv('data/PWD_Oct2021+Jun2022_LFM_WP_Calcs.csv',as.is=T)
 str(lw)
 
-# for analysis, remove one sample of Baccharis that had no LFM
+# for analysis, remove samples with no LFM
 lw <- lw[-which(is.na(lw$Bulk.LFM)),]
 lw$Species[which(lw$Species=='CEATHY')] <- 'CEAPAR'
 lw$Species[which(lw$Species=='QUEAGRI')] <- 'QUEAGR'
 
 # remove two bad LFM values
+lw$Bulk.LFM[c(48,51)]
 lw$Bulk.LFM[c(48,51)] <- NA
 
 # remove BACPIL
@@ -39,10 +40,14 @@ cor(lw$Midday.mean,lw$Bulk.LFM,use='pair')
 table(lw$Species,lw$Sampling)
 length(which(lw$Sampling=='Jun22'))
 
-
 # plotting inverse of LFM makes it fairly linear
 lw$iBulk.LFM <- 1/lw$Bulk.LFM
 plot(lw$Midday.mean,lw$iBulk.LFM,log='')
+abline(h=1/0.7,lty=2)
+
+# log LFM
+lw$lBulk.LFM <- log10(lw$Bulk.LFM)
+plot(lw$Midday.mean,lw$lBulk.LFM,log='')
 
 # plot all data with lines by species
 plot(iBulk.LFM~Midday.mean,data=lw)
@@ -105,28 +110,31 @@ legend(-7.2,2.5,legend = c('Pivovaroff','Boving/Moritz','Pepperwood'),fill = c('
 
 
 ## Combine our data and P for individual species
-par(mar=c(5,5,3,1))
-spSel <- c('ADEFAS','ADFA')
-spSel <- c('HETARB','HEAR')
-spSel <- c('QUEAGR','QUAG')
+op=par(mar=c(5,5,3,1),mfrow=c(2,2))
+spSel <- list()
+spSel[[1]] <- c('ADEFAS','ADFA')
+spSel[[2]] <- c('HETARB','HEAR')
+spSel[[3]] <- c('QUEAGR','QUAG')
 
-r1 <- which(lw$Species==spSel[1])
-r2 <- which(p$Species==spSel[2])
-xlims <- c(min(c(lw$Midday.mean[r1],p$WP_md_MPa[r2]),na.rm=T),max(c(lw$Midday.mean[r1],p$WP_md_MPa[r2]),na.rm=T))
-ylims <- c(min(c(lw$Bulk.LFM[r1],p$bulkLFM[r2]),na.rm=T),max(c(lw$Bulk.LFM[r1],p$bulkLFM[r2]),na.rm=T))
-plot(lw$Midday.mean[r1],lw$Bulk.LFM[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[1],xlab='Midday water potential (MPa)',ylab='Life fuel moisture',cex=2)
-points(p$WP_md_MPa[r2],p$bulkLFM[r2],col='red',pch=19,cex=2)
-
+for (i in 1:3) {
+  r1 <- which(lw$Species==spSel[[i]][1])
+  r2 <- which(p$Species==spSel[[i]][2])
+  xlims <- c(min(c(lw$Midday.mean[r1],p$WP_md_MPa[r2]),na.rm=T),max(c(lw$Midday.mean[r1],p$WP_md_MPa[r2]),na.rm=T))
+  ylims <- c(min(c(lw$Bulk.LFM[r1],p$bulkLFM[r2]),na.rm=T),max(c(lw$Bulk.LFM[r1],p$bulkLFM[r2]),na.rm=T))
+  plot(lw$Midday.mean[r1],lw$Bulk.LFM[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[[i]][1],xlab='Midday water potential (MPa)',ylab='Life fuel moisture',cex=2)
+  points(p$WP_md_MPa[r2],p$bulkLFM[r2],col='red',pch=19,cex=2)
+}
 ## Combine our data and m for individual species
-par(mar=c(5,5,3,1))
-spSel <- c('QUEKEL','QUKE')
+spSel[[4]] <- c('QUEKEL','QUKE')
 
-r1 <- which(lw$Species==spSel[1])
-r2 <- which(m$spp==spSel[2])
+r1 <- which(lw$Species==spSel[[4]][1])
+r2 <- which(m$spp==spSel[[4]][2])
 xlims <- c(min(c(lw$Midday.mean[r1],m$mpa[r2]),na.rm=T),max(c(lw$Midday.mean[r1],m$mpa[r2]),na.rm=T))
 ylims <- c(min(c(lw$Bulk.LFM[r1],m$lfm[r2]),na.rm=T),max(c(lw$Bulk.LFM[r1],m$lfm[r2]),na.rm=T))
-plot(lw$Midday.mean[r1],lw$Bulk.LFM[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[1],cex=2)
-points(m$mpa[r2],m$lfm[r2],col='darkgreen',cex=2)
+plot(lw$Midday.mean[r1],lw$Bulk.LFM[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[[4]][1],cex=2)
+points(m$mpa[r2],m$lfm[r2],col='darkgreen',cex=2,pch=19)
+
+par(op)
 
 ## barplots of species traits - by season
 lw$SpecSeason <- paste(lw$Species,lw$Sampling,sep='-')
@@ -198,7 +206,7 @@ barplot(spMeans$PredawnWP,main='Predawn WP',names.arg = spMeans$sp2, ylim=c(-6.5
 barplot(spMeans$WPdiff,main='WP differential',names.arg = spMeans$sp2)
 par(op)
 
-pairs(spMeans[,1:6])
+pairs(spMeans[,3:8])
 plot(spMeans$MiddayWP,spMeans$BulkLFM,type='n')
 text(spMeans$MiddayWP,spMeans$BulkLFM,labels=spMeans$sp6)
 
