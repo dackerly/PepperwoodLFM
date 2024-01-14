@@ -2,64 +2,59 @@
 rm(list=ls())
 library(ggplot2)
 
-lw <- read.csv('data/PWD_Oct2021+Jun2022_LFM_WP_Calcs.csv',as.is=T)
-str(lw)
+lwa <- read.csv('data/all-data-combined.csv',as.is=T,row.names=1)
+lwa$ilfm <- 1/lwa$lfm
+head(lwa)
 
-# for analysis, remove samples with no LFM
-lw <- lw[-which(is.na(lw$Bulk.LFM)),]
-lw$Species[which(lw$Species=='CEATHY')] <- 'CEAPAR'
-lw$Species[which(lw$Species=='QUEAGRI')] <- 'QUEAGR'
-
-# remove two bad LFM values
-lw$Bulk.LFM[c(48,51)]
-lw$Bulk.LFM[c(48,51)] <- NA
-
-# remove BACPIL
-lw <- lw[-which(lw$Species=='BACPIL'),]
-
-# sample sizes
-table(lw$Species)
-write.csv(table(lw$Species,lw$Site),'results/sampletable.csv')
-table(lw$Species,lw$Site)
-nrow(lw)
+pw <- lwa[lwa$study=='Pepperwood',]
+head(pw)
+dim(pw)
 
 # ID rows
-rOct <- which(lw$Sampling=='Oct21')
-rJun <- which(lw$Sampling=='Jun22')
+rOct <- which(pw$date=='21-Oct')
+rJun <- which(pw$date=='22-Jun')
+length(rOct)
+length(rJun)
+
+# sample sizes
+table(pw$Species[rOct])
+table(pw$Species[rJun])
+nrow(pw)
+
+table(pw$Species,pw$date)
 
 # Quick look!
-plot(lw$Midday.mean,lw$Bulk.LFM,pch=19,col='red',ylim=c(0,2.5),xlab='Midday water potential (MPa)',ylab='LFM')
+plot(pw$mwp,pw$lfm,pch=19,col='red',ylim=c(0,2.5),xlab='Midday water potential (MPa)',ylab='LFM')
 abline(h=0.7,lty=2)
-points(lw$Midday.mean[rJun],lw$Bulk.LFM[rJun],pch=19,col='black')
+points(pw$mwp[rJun],pw$lfm[rJun],pch=19,col='black')
 
 # how much of fall variation due to WP
-cor(lw$Midday.mean[rJun],lw$Bulk.LFM[rJun])
-cor(lw$Midday.mean[rOct],lw$Bulk.LFM[rOct],use='pair')
-cor(lw$Midday.mean,lw$Bulk.LFM,use='pair')
-
-table(lw$Species,lw$Sampling)
-length(which(lw$Sampling=='Jun22'))
+cor(pw$mwp[rJun],pw$lfm[rJun])
+cor(pw$mwp[rOct],pw$lfm[rOct],use='pair')
+cor(pw$mwp,pw$lfm,use='pair')
 
 # plotting inverse of LFM makes it fairly linear
-lw$iBulk.LFM <- 1/lw$Bulk.LFM
-plot(lw$Midday.mean,lw$iBulk.LFM,log='')
+plot(pw$mwp,pw$ilfm,log='')
+fit <- lm(ilfm~mwp,data=pw)
+coefficients(fit)
 abline(h=1/0.7,lty=2)
+abline(fit)
 
-# log LFM
-lw$lBulk.LFM <- log10(lw$Bulk.LFM)
-plot(lw$Midday.mean,lw$lBulk.LFM,log='')
+# residual diagnostic plot on ANCOVAS with each transformation
+plot(pw$ilfm~pw$mwp)
+fit <- glm(ilfm~mwp+Species,data=pw)
+summary(fit)
+plot(fit)
+BIC(fit)
 
-# plot all data with lines by species
-plot(iBulk.LFM~Midday.mean,data=lw)
-abline(h=1/0.7,lty=2)
-(spp <- sort(unique(lw$Species[which(lw$Sampling=='Jun22')])))
-for (i in 1:length(spp))
-{
-  r1 <- which(lw$Species==spp[i])
-  fit <- lm(iBulk.LFM[r1]~Midday.mean[r1],data=lw)
-  abline(fit)
-}
+# inverse with interactions for different slopes
+plot(pw$ilfm~pw$mwp)
+fit2 <- glm(ilfm~mwp * Species,data=pw)
+summary(fit2)
+#plot(fit2)
+BIC(fit2) # much higher (less negative) - different slopes not supported
 
+### now analyze each study and all
 # solve lm for chosen y val
 solveForX <- function(fit,yval=0.7) {
   # y = m*x + b
@@ -68,43 +63,114 @@ solveForX <- function(fit,yval=0.7) {
   return((yval-cs[1])/cs[2])
 }
 
-## show individual species
-par(mar=c(5,5,3,1))
-spSel <- c('QUEDUR')
-r1 <- which(lw$Species==spSel)
-plot(lw$Midday.mean[r1],lw$Bulk.LFM[r1],pch=19,main=spSel[1])
-abline(h=0.7,lty=2)
-fit <- lm(lw$Bulk.LFM[r1]~lw$Midday.mean[r1])
-abline(fit)
-solveForX(fit)
+ssel <- 'StuntRanch'
+ssel <- 'SEKI'
+ssel <- 'Pepperwood'
+ssel <- 'All'
+if (ssel=='All') td <- lwa else td <- lwa[which(lwa$study==ssel),]
 
-plot(lw$Midday.mean[r1],lw$iBulk.LFM[r1],pch=19,main=spSel[1])
+# plot all data with lines by species
+plot(ilfm~mwp,data=td)
 abline(h=1/0.7,lty=2)
-fit <- lm(lw$iBulk.LFM[r1]~lw$Midday.mean[r1])
+fit <- glm(ilfm~mwp,data=td)
+summary(fit)
+abline(fit,col='red')
+mean(td$mwp,na.rm=T)
+
+(spp <- sort(unique(td$Species)))
+par(mar=c(5,5,3,1))
+
+i=1
+for (i in 1:length(spp))
+{
+  r1 <- which(td$Species==spp[i])
+  print(c(i,length(r1)))
+  fit <- lm(ilfm[r1]~mwp[r1],data=td)
+  cfit <- coefficients(fit)
+  mm <- range(td$mwp[r1],na.rm=T)
+  yy <- cfit[1] + cfit[2]*mm
+  lines(mm,yy)
+}
+
+pres <- data.frame(Species=spp,N=NA,minWP=NA,intercept=NA,slope=NA,critWP=NA,LFM2.5=NA,i.intercept=NA,i.slope=NA,i.critWP=NA,i.LFM2.5=NA)
+i=1
+for (i in 1:length(spp))
+{
+  #print(i)
+  spSel <- spp[i]
+  temp <- td[which(td$Species==spSel),]
+  temp <- temp[complete.cases(temp[,c('mwp','lfm')]),]
+  pres[i,c('N')] <- nrow(temp)
+  pres[i,'minWP'] <- min(temp$mwp)
+  #plot(temp$mwp,temp$lfm,pch=19,main=spSel[1])
+  #abline(h=0.7,lty=2)
+  fit <- lm(temp$lfm~temp$mwp)
+  cfit <- coefficients(fit)
+  pres[i,c('intercept','slope')] <- cfit
+  #abline(fit)
+  pres[i,'critWP'] <- solveForX(fit)
+  pres[i,'LFM2.5'] <- cfit[1] + cfit[2] * (-2.5)
+  
+  #plot(temp$mwp,temp$ilfm,pch=19,main=spSel[1])
+  abline(h=1/0.7,lty=2)
+  fit <- lm(temp$ilfm~temp$mwp)
+  cfit <- coefficients(fit)
+  pres[i,c('i.intercept','i.slope')] <- cfit
+  #abline(fit)
+  pres[i,'i.critWP'] <- solveForX(fit,1/0.7)
+  pres[i,'i.LFM2.5'] <- 1/(cfit[1] + cfit[2] * (-2.5))
+}
+pres
+write.csv(pres,paste('results/',ssel,'-species-results.csv',sep=''))
+
+plot(pres$minWP,pres$i.intercept)
+### end subset analysis
+
+### NEED TO EDIT BELOW HERE
+
+# now plot all species across all studies
+# plot all data with lines by species
+plot(ilfm~mwp,data=lwa,xlim=c(-9,0))
+abline(h=1/0.7,lty=2)
+fit <- glm(ilfm~mwp,data=lwa)
+summary(fit)
 abline(fit)
-solveForX(fit,1/0.7)
+mean(td$mwp,na.rm=T)
 
-## compare to Pivovaroff study
-p <- read.csv('data/other_studies/Pivovaroff_WP_vs_LFM.csv',as.is=T)
-head(p)
-p$bulkLFM <- p$LFM_./100
-table(p$Species)
+(spp <- sort(unique(lwa$Species)))
+i=1
+for (i in 1:length(spp))
+{
+  r1 <- which(lwa$Species==spp[i])
+  fit <- lm(ilfm[r1]~mwp[r1],data=lwa)
+  cfit <- coefficients(fit)
 
-m <- read.csv('data/other_studies/seki_lfm_mpa_09062022.csv')
-head(m)
-dim(m)
-table(m$spp)
-m$lfm <- m$lfm/100
-summary(m$lfm)
-summary(m$mpa)
+  mm <- range(lwa$mwp[r1],na.rm=T)
+  print(round(c(i,cfit,mm),2))
+  yy <- cfit[1] + cfit[2]*mm
+  lines(mm,yy,col='red')
+}
 
-minX <- min(c(m$mpa,p$WP_md_MPa,lw$Midday.mean),na.rm=T)
-maxX <- max(c(m$mpa,p$WP_md_MPa,lw$Midday.mean),na.rm=T)
+# model fit
+# no species
+fit1 <- glm(ilfm~mwp,data=lwa)
+BIC(fit1)
+
+fit2 <- glm(ilfm~mwp+Species,data=lwa)
+BIC(fit2)
+
+fit3 <- glm(ilfm~mwp*Species,data=lwa)
+BIC(fit3)
+
+### good to here
+
+minX <- min(c(m$water_potential,p$WP_md_MPa,pw$mwp),na.rm=T)
+maxX <- max(c(m$water_potential,p$WP_md_MPa,pw$mwp),na.rm=T)
 
 par(mar=c(5,5,1,1))
 plot(p$WP_md_MPa,p$bulkLFM,pch=19, xlab='Midday water potential (MPa)',ylab='Bulk live fuel moisture',cex.lab=2,xlim=c(minX,maxX))
-points(m$mpa,m$lfm,pch=1,col='darkgreen',cex=1.5)
-points(lw$Midday.mean,lw$Bulk.LFM,pch=19,col='red',cex=1.5)
+points(m$water_potential,m$lfm,pch=1,col='darkgreen',cex=1.5)
+points(pw$mwp,pw$lfm,pch=19,col='red',cex=1.5)
 
 legend(-7.2,2.5,legend = c('Pivovaroff','Boving/Moritz','Pepperwood'),fill = c('black','darkgreen','red'),cex = 1.5)
 
@@ -117,37 +183,37 @@ spSel[[2]] <- c('HETARB','HEAR')
 spSel[[3]] <- c('QUEAGR','QUAG')
 
 for (i in 1:3) {
-  r1 <- which(lw$Species==spSel[[i]][1])
+  r1 <- which(pw$Species==spSel[[i]][1])
   r2 <- which(p$Species==spSel[[i]][2])
-  xlims <- c(min(c(lw$Midday.mean[r1],p$WP_md_MPa[r2]),na.rm=T),max(c(lw$Midday.mean[r1],p$WP_md_MPa[r2]),na.rm=T))
-  ylims <- c(min(c(lw$Bulk.LFM[r1],p$bulkLFM[r2]),na.rm=T),max(c(lw$Bulk.LFM[r1],p$bulkLFM[r2]),na.rm=T))
-  plot(lw$Midday.mean[r1],lw$Bulk.LFM[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[[i]][1],xlab='Midday water potential (MPa)',ylab='Life fuel moisture',cex=2)
+  xlims <- c(min(c(pw$mwp[r1],p$WP_md_MPa[r2]),na.rm=T),max(c(pw$mwp[r1],p$WP_md_MPa[r2]),na.rm=T))
+  ylims <- c(min(c(pw$lfm[r1],p$bulkLFM[r2]),na.rm=T),max(c(pw$lfm[r1],p$bulkLFM[r2]),na.rm=T))
+  plot(pw$mwp[r1],pw$lfm[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[[i]][1],xlab='Midday water potential (MPa)',ylab='Life fuel moisture',cex=2)
   points(p$WP_md_MPa[r2],p$bulkLFM[r2],col='red',pch=19,cex=2)
 }
 ## Combine our data and m for individual species
 spSel[[4]] <- c('QUEKEL','QUKE')
 
-r1 <- which(lw$Species==spSel[[4]][1])
+r1 <- which(pw$Species==spSel[[4]][1])
 r2 <- which(m$spp==spSel[[4]][2])
-xlims <- c(min(c(lw$Midday.mean[r1],m$mpa[r2]),na.rm=T),max(c(lw$Midday.mean[r1],m$mpa[r2]),na.rm=T))
-ylims <- c(min(c(lw$Bulk.LFM[r1],m$lfm[r2]),na.rm=T),max(c(lw$Bulk.LFM[r1],m$lfm[r2]),na.rm=T))
-plot(lw$Midday.mean[r1],lw$Bulk.LFM[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[[4]][1],cex=2)
-points(m$mpa[r2],m$lfm[r2],col='darkgreen',cex=2,pch=19)
+xlims <- c(min(c(pw$mwp[r1],m$water_potential[r2]),na.rm=T),max(c(pw$mwp[r1],m$water_potential[r2]),na.rm=T))
+ylims <- c(min(c(pw$lfm[r1],m$lfm[r2]),na.rm=T),max(c(pw$lfm[r1],m$lfm[r2]),na.rm=T))
+plot(pw$mwp[r1],pw$lfm[r1],xlim=xlims,ylim=ylims,pch=19,main=spSel[[4]][1],cex=2)
+points(m$water_potential[r2],m$lfm[r2],col='darkgreen',cex=2,pch=19)
 
 par(op)
 
 ## barplots of species traits - by season
-lw$SpecSeason <- paste(lw$Species,lw$Sampling,sep='-')
+pw$SpecSeason <- paste(pw$Species,pw$Sampling,sep='-')
 
-(bulkLFM <- tapply(lw$Bulk.LFM,lw$SpecSeason,mean,na.rm=T))
+(bulkLFM <- tapply(pw$lfm,pw$SpecSeason,mean,na.rm=T))
 
 spMeans <- data.frame(Species=substr(names(bulkLFM),1,6),Season=substr(names(bulkLFM),8,12),BulkLFM=bulkLFM,LeafLFM=NA,StemLFM=NA,PredawnWP=NA,MiddayWP=NA,WPdiff=NA)
 rownames(spMeans) <- names(bulkLFM)
-spMeans$LeafLFM <- tapply(lw$Leaf.LFM,lw$SpecSeason,mean,na.rm=T)
-spMeans$StemLFM <- tapply(lw$Stem.LFM,lw$SpecSeason,mean,na.rm=T)
-spMeans$PredawnWP <- tapply(lw$Predawn.mean,lw$SpecSeason,mean,na.rm=T)
-spMeans$MiddayWP <- tapply(lw$Midday.mean,lw$SpecSeason,mean,na.rm=T)
-spMeans$WPdiff <- tapply(lw$WPdiff,lw$SpecSeason,mean,na.rm=T)
+spMeans$LeafLFM <- tapply(pw$Leaf.LFM,pw$SpecSeason,mean,na.rm=T)
+spMeans$StemLFM <- tapply(pw$Stem.LFM,pw$SpecSeason,mean,na.rm=T)
+spMeans$PredawnWP <- tapply(pw$Predawn.mean,pw$SpecSeason,mean,na.rm=T)
+spMeans$MiddayWP <- tapply(pw$mwp,pw$SpecSeason,mean,na.rm=T)
+spMeans$WPdiff <- tapply(pw$WPdiff,pw$SpecSeason,mean,na.rm=T)
 rownames(spMeans)
 
 spMeans
@@ -183,8 +249,6 @@ for (i in 1:length(spNm)) {
   lines(tmp$MiddayWP,tmp$BulkLFM)
 }
 text(spMeans$MiddayWP[which((spMeans$Season=='Oct21'))],spMeans$BulkLFM[(spMeans$Season=='Oct21')],spMeans$Species[(spMeans$Season=='Oct21')],col='red')
-
-
 abline(h=0.7,lty=2)
 
 plot(BulkLFM~PredawnWP,data=spMeans[which(spMeans$Season=='Oct21'),],type='n',xlim=c(-5,-0.5),ylim=c(0.5,1.25))
@@ -214,11 +278,11 @@ text(spMeans$MiddayWP,spMeans$BulkLFM,labels=spMeans$sp6)
 ### GGPLOT ANALYSES
 # Inverse analyses
 
-ifit <- lm(iBulk.LFM~Midday.mean,data=lw)
+ifit <- lm(ilfm~mwp,data=pw)
 abline(ifit)
 
-gploti <- ggplot(lw) + 
-  geom_point(aes(x=Midday.mean, y=iBulk.LFM,color=Species)) +
+gploti <- ggplot(pw) + 
+  geom_point(aes(x=mwp, y=ilfm,color=Species)) +
   geom_abline(slope=ifit$coefficients[2],intercept=ifit$coefficients[1]) + 
   labs(x='Midday mean water potential (MPa)',y='Inverse of live fuel moisture') 
 
@@ -227,21 +291,21 @@ print(gploti) + geom_hline(yintercept=1/0.7)
 gploti + facet_wrap(~Species,ncol=4)
 
 # analog to PV curves
-plot(I(-1/(lw$Midday.mean))~I(1-lw$Bulk.LFM))
-#plot(I(-1/(lw$Midday.mean))~I(1-lw$Bulk.LFM))
+plot(I(-1/(pw$mwp))~I(1-pw$lfm))
+#plot(I(-1/(pw$mwp))~I(1-pw$lfm))
 
 
 # not inverse analyses
-xbp <- which(lw$Species=='BACPIL')
+xbp <- which(pw$Species=='BACPIL')
 
 #choose whether to use all points or without bacpil
-xx <- lw
-xx <- lw[-xbp,]
+xx <- pw
+xx <- pw[-xbp,]
 
-fit <- lm(Bulk.LFM~Midday.mean,data=xx)
+fit <- lm(lfm~mwp,data=xx)
 
 gplot <- ggplot(xx) + 
-  geom_point(aes(x=Midday.mean, y=Bulk.LFM,color=Species),size=4) +
+  geom_point(aes(x=mwp, y=lfm,color=Species),size=4) +
   geom_abline(slope=fit$coefficients[2],intercept=fit$coefficients[1]) + 
   labs(x='Midday mean water potential (MPa)',y='Live fuel moisture (%)') 
 
@@ -250,7 +314,7 @@ print(gplot) + geom_hline(yintercept=0.7)
 
 gplot + facet_wrap(~Species,ncol=4)
 
-plot(Bulk.LFM~Midday.mean,data=lw,pch=19)
+plot(lfm~mwp,data=pw,pch=19)
 abline(fit)
 
 
