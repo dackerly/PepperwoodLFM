@@ -26,6 +26,16 @@ head(m)
 m$lfm <- m$lfm/100
 summary(m$lfm)
 
+s <- read.csv('data/other_studies/sedgwick_22_lfm_mpa_df20230724.csv')
+names(s)
+s$SpCode6 <- spc$SpCode6[match(s$species,spc$Sedgwick.spp)]
+table(s$species,s$SpCode6)
+head(s)
+s$lfm <- s$lfm_percent/100
+s$mpa_mean <- -s$mpa_mean
+summary(s$lfm)
+summary(s$mpa_mean)
+
 # subset to same columns and make names the same
 head(lw)
 lwx <- lw[,c('SpCode6','Sampling','Midday.mean','Bulk.LFM')]
@@ -45,12 +55,22 @@ names(mx) <- c('Species','date','mwp','lfm')
 mx$study <- 'SEKI'
 head(mx)
 
-lwa <- rbind(lwx,px,mx)
+names(s)
+sx <- s[,c('SpCode6','date_lfm','mpa_mean','lfm')]
+names(sx) <- c('Species','date','mwp','lfm')
+sx$study <- 'Sedgwick'
+head(sx)
+
+lwa <- rbind(lwx,px,mx,sx)
 dim(lwa)
 head(lwa)
 
+lwa$Sp.Site <- paste(lwa$Species,lwa$study,sep="_")
+
 # take complete cases only
 lwa <- lwa[complete.cases(lwa[,c('mwp','lfm')]),]
+dim(lwa)
+lwa <- lwa[-which(is.na(lwa$Species)),]
 dim(lwa)
 
 # check data distribution

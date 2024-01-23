@@ -1,6 +1,7 @@
 ## preliminary analysis of 2021 LFM data
 rm(list=ls())
 library(ggplot2)
+source('scripts/lfm_functions.R')
 
 lwa <- read.csv('data/all-data-combined.csv',as.is=T,row.names=1)
 lwa$ilfm <- 1/lwa$lfm
@@ -17,11 +18,9 @@ length(rOct)
 length(rJun)
 
 # sample sizes
-table(pw$Species[rOct])
-table(pw$Species[rJun])
-nrow(pw)
-
+table(pw$date)
 table(pw$Species,pw$date)
+nrow(pw)
 
 # Quick look!
 plot(pw$mwp,pw$lfm,pch=19,col='red',ylim=c(0,2.5),xlab='Midday water potential (MPa)',ylab='LFM')
@@ -41,7 +40,6 @@ abline(h=1/0.7,lty=2)
 abline(fit)
 
 # residual diagnostic plot on ANCOVAS with each transformation
-plot(pw$ilfm~pw$mwp)
 fit <- glm(ilfm~mwp+Species,data=pw)
 summary(fit)
 plot(fit)
@@ -54,31 +52,49 @@ summary(fit2)
 #plot(fit2)
 BIC(fit2) # much higher (less negative) - different slopes not supported
 
+# plot 
+
+
+
+
+
+
+
+
+
+
+
 ### now analyze each study and all
-# solve lm for chosen y val
-solveForX <- function(fit,yval=0.7) {
-  # y = m*x + b
-  # (y-b)/m = x
-  cs <- coefficients(fit)
-  return((yval-cs[1])/cs[2])
+
+# pick first for all, or one of the following with the assignment statement
+if (TRUE) {
+  ssel <- 'All';td <- lwa
+} else {
+  ssel <- 'StuntRanch'
+  ssel <- 'SEKI'
+  ssel <- 'Pepperwood'
+  ssel <- c('StuntRanch','Pepperwood')
+  td <- lwa[which(lwa$study %in% ssel),]
 }
-
-ssel <- 'StuntRanch'
-ssel <- 'SEKI'
-ssel <- 'Pepperwood'
-ssel <- 'All'
-if (ssel=='All') td <- lwa else td <- lwa[which(lwa$study==ssel),]
-
-# plot all data with lines by species
-plot(ilfm~mwp,data=td)
-abline(h=1/0.7,lty=2)
-fit <- glm(ilfm~mwp,data=td)
-summary(fit)
-abline(fit,col='red')
-mean(td$mwp,na.rm=T)
 
 (spp <- sort(unique(td$Species)))
 par(mar=c(5,5,3,1))
+
+fit1 <- glm(ilfm~mwp+Species,data=td)
+BIC(fit1)
+coefficients(fit1)
+fit2 <- glm(ilfm~mwp*Species,data=td)
+BIC(fit2)
+
+# plot all data with lines by species
+plot(ilfm~mwp,data=td,main=ssel,xlim=c(-8,0),ylim=c(0,2.5))
+abline(h=1/0.7,lty=2)
+fit <- glm(ilfm~mwp,data=td)
+summary(fit)
+abline(fit,col='red',lwd=2)
+mean(td$mwp,na.rm=T)
+
+
 
 i=1
 for (i in 1:length(spp))
@@ -89,7 +105,7 @@ for (i in 1:length(spp))
   cfit <- coefficients(fit)
   mm <- range(td$mwp[r1],na.rm=T)
   yy <- cfit[1] + cfit[2]*mm
-  lines(mm,yy)
+  lines(mm,yy,col='red')
 }
 
 pres <- data.frame(Species=spp,N=NA,minWP=NA,intercept=NA,slope=NA,critWP=NA,LFM2.5=NA,i.intercept=NA,i.slope=NA,i.critWP=NA,i.LFM2.5=NA)
@@ -124,6 +140,7 @@ pres
 write.csv(pres,paste('results/',ssel,'-species-results.csv',sep=''))
 
 plot(pres$minWP,pres$i.intercept)
+
 ### end subset analysis
 
 ### NEED TO EDIT BELOW HERE
