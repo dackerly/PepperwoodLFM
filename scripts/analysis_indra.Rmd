@@ -12,3 +12,27 @@ library(here)
 library(janitor)
 ```
 
+Read in data: 
+
+```{r}
+df <- read_csv(here::here("data", "all-data-combined.csv")) %>% 
+  clean_names() %>% 
+  mutate(ilfm = 1/lfm)
+```
+
+Make nice figures: 
+
+#####Figure 3. 
+
+```{r}
+df %>% 
+  ggplot(aes(y = lfm, x = mwp, color = study, shape = study)) + 
+  geom_point(alpha = .6) +
+  labs(y = "Midday Water Poential (MPa)", 
+       x = "Live Fuel Moisture (%)", 
+       color = "Study", 
+       shape = "Study") +
+  color +
+  theme(legend.position.inside = c(0.1, 0.8))
+```
+
