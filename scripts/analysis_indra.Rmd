@@ -10,6 +10,7 @@ output: html_document
 library(tidyverse)
 library(here)
 library(janitor)
+source(here("scripts", "figure_info.R"))
 ```
 
 Read in data: 
@@ -22,17 +23,1726 @@ df <- read_csv(here::here("data", "all-data-combined.csv")) %>%
 
 Make nice figures: 
 
-#####Figure 3. 
+#####Figure 1: 
+
+#####Figure 2: 
+
+
+#####Figure 3: 
 
 ```{r}
 df %>% 
-  ggplot(aes(y = lfm, x = mwp, color = study, shape = study)) + 
+  ggplot(aes(y = lfm*100, x = mwp, color = study, shape = study)) + 
   geom_point(alpha = .6) +
-  labs(y = "Midday Water Poential (MPa)", 
-       x = "Live Fuel Moisture (%)", 
+  labs(x = "Midday Water Poential (MPa)", 
+       y = "Live Fuel Moisture (%)", 
        color = "Study", 
        shape = "Study") +
   color +
-  theme(legend.position.inside = c(0.1, 0.8))
+  theme(legend.position = "inside", 
+        legend.position.inside = c(0.1, 0.8))
+```
+
+Linear relationship between iLFM and middays: 
+
+```{r}
+#data
+df  <- read_csv(here::here("data", "all-data-combined.csv")) %>% 
+  clean_names() %>% 
+  mutate(ilfm = 1/lfm) 
+
+#model with untransformed LFM: 
+mod <- glm(mwp ~ lfm, data = df)
+mod
+summary(mod)
+plot(mod)
+
+#model with transformed LFM: 
+mod_inv <- glm(mwp ~ ilfm, data = df)
+mod_inv
+summary(mod_inv)
+plot(mod_inv)
+#resid(mod_inv)
+
+AIC(mod_inv)
+AIC(mod)
+#inverse LFM also has the better AIC
+
+#Does this also work for SEKI data? 
+df_seki  <- read_csv(here::here("data", "all-data-combined.csv")) %>% 
+  clean_names() %>% 
+  mutate(ilfm = 1/lfm) %>% 
+  filter(study == "SEKI")
+
+#model with untransformed LFM: 
+mod <- glm(mwp ~ lfm, data = df_seki)
+mod
+summary(mod)
+plot(mod)
+
+#model with transformed LFM: 
+mod_inv <- glm(mwp ~ ilfm, data = df_seki)
+mod_inv
+summary(mod_inv)
+plot(mod_inv)
+#resid(mod_inv)
+
+AIC(mod_inv)
+AIC(mod)
+
+#SEKI shows this the least
+
+
+#What about only coastal data?
+df_coastal  <- read_csv(here::here("data", "all-data-combined.csv")) %>% 
+  clean_names() %>% 
+  mutate(ilfm = 1/lfm) %>% 
+  filter(!(study == "SEKI"))
+
+#model with untransformed LFM: 
+mod <- glm(mwp ~ lfm, data = df_coastal)
+mod
+summary(mod)
+plot(mod)
+
+#model with transformed LFM: 
+mod_inv <- glm(mwp ~ ilfm, data = df_coastal)
+mod_inv
+summary(mod_inv)
+plot(mod_inv)
+#resid(mod_inv)
+
+AIC(mod_inv)
+AIC(mod)
+
+#SEKI shows this the least
+```
+
+####Figure 4:
+
+LFM and MPa exhibit overall nonlinear relationships across the entire dataset. 
+
+
+
+
+ChatGPT code: 
+
+```{r}
+## Preliminary analysis of 2021 Live Fuel Moisture (LFM) data
+
+rm(list = ls())  # Remove all objects from the workspace to start fresh
+
+library(ggplot2)  # Load ggplot2 package for advanced plotting capabilities
+source(here('scripts', 'lfm_functions.R'))
+# Source custom functions from external script
+
+# Read in the combined dataset; 'as.is = TRUE' prevents strings from converting to factors
+# 'row.names = 1' uses the first column as row names
+lwa <- read.csv(here('data', 'all-data-combined.csv'))
+
+# Calculate the inverse of LFM for modeling purposes
+lwa$ilfm <- 1 / lwa$lfm
+
+# Display the first few rows of the data to check if it's loaded correctly
+head(lwa)
+
+# Create a frequency table of the 'study' variable
+table(lwa$study)
+
+# Get a sorted list of unique study sites
+sites <- sort(unique(lwa$study))
+
+# Verify the number of observations per study
+table(lwa$study)
+
+# Check the total number of observations
+nrow(lwa)
+
+### Plotting by Site
+
+# Define colors for each site for consistent plotting
+scolors <- c("#B9C7E2", "#ECAB99",  "#5B6530", "#9484B1",  "#F1C100")  # Added color for SEKI
+
+# Assign colors to each observation based on the study site
+lwa$scolors <- scolors[match(lwa$study, sites)]
+
+# Confirm that colors are assigned correctly
+table(lwa$scolors)
+
+# Randomly sample 1000 observations for plotting to avoid overplotting
+rsamp <- sample(1:nrow(lwa), 1000)  # Sample from the full dataset
+
+# Set up an empty plot with defined axes and limits
+plot(lfm ~ mwp, data = lwa, type = 'n',
+     xlab = 'Midday water potential (MPa)',
+     ylab = 'Live fuel moisture',
+     xlim = c(-8, 0), ylim = c(0, 3.5))
+
+# Plot data points for each study site with different symbols and colors
+points(lfm ~ mwp, data = lwa[lwa$study == 'Sedgwick', ],
+       pch = 5, cex = 1, col = lwa$scolors[lwa$study == 'Sedgwick'])
+
+points(lfm ~ mwp, data = lwa[lwa$study == 'StuntRanch', ],
+       pch = 15, cex = 1, col = lwa$scolors[lwa$study == 'StuntRanch'])
+
+points(lfm ~ mwp, data = lwa[lwa$study == 'Pepperwood', ],
+       pch = 19, cex = 1.2, col = lwa$scolors[lwa$study == 'Pepperwood'])
+
+# Include SEKI in the points plotting
+points(lfm ~ mwp, data = lwa[lwa$study == 'SEKI', ],
+       pch = 17, cex = 1.2, col = lwa$scolors[lwa$study == 'SEKI'])  # Different symbol for SEKI
+
+# Add a legend to the plot
+legend(-7, 3, sites, fill = NULL, border = 'white')
+
+# Add custom legend symbols corresponding to each site
+points(rep(-6.7, length(sites)), seq(2.84, 2.64 - 0.2 * (length(sites) - 1), length.out = length(sites)),
+       pch = c(19, 5, 15, 17), col = scolors, cex = 2)  # Added SEKI symbol
+```
+
+Rewrite code so that it just gets the slope from a run using all species independantly: 
+```{r}
+lwa_new <- lwa %>% 
+  
+# Prepare for analyses by site
+sites <- sort(unique(lwa$study))  # Re-affirm the list of study sites
+table(lwa$study)  # Check the distribution of observations
+
+# Create a new logical column indicating if the site is coastal
+lwa$coastal <- TRUE
+lwa$coastal[which(lwa$study == 'SEKI')] <- FALSE  # Mark 'SEKI' as non-coastal
+
+# Initialize lists and labels for storing results
+rsel <- list()  # List to hold row indices for each analysis subset
+slabel <- sites  # Labels corresponding to each subset
+
+# Populate 'rsel' with row indices for each site
+for (i in 1:length(sites)) {
+  rsel[[i]] <- which(lwa$study == sites[i])
+}
+
+# Add indices for coastal sites
+i <- i + 1
+rsel[[i]] <- which(lwa$coastal)
+
+# Add indices for all data
+i <- i + 1
+rsel[[i]] <- 1:nrow(lwa)
+
+# Update labels accordingly
+slabel <- c(slabel, 'Coastal', 'All')
+
+# Confirm that 'rsel' and 'slabel' are correctly set up
+length(rsel)
+slabel
+
+# Initialize data structures to store statistical results
+stres <- data.frame(
+  study = slabel,
+  Nspec = NA,
+  Nobs = NA,
+  BIC.no.int = NA,
+  common.slope = NA,
+  BIC.int = NA
+)
+
+spres <- list()  # List to hold species-specific results
+scoeff <- list()  # List to hold coefficients from models
+pvals <- list()  # List to hold predicted values from models
+
+# Define parameters for model forms and factors
+pform <- 'Inv'  # Model form: 'Reg' for regular, could be 'Inv' for inverse
+sppFac <- 'Species'  # Species factor, could be 'Species' or 'SpeciesSite'
+slpModel <- 'SpSpecific'  # Slope model: 'Common' or 'SpSpecific'
+
+# Initialize the loop counter
+i = 6
+
+# Loop through each subset defined in 'rsel'
+for (i in 1:length(rsel)) {
+  # Subset the data for the current selection
+  td <- lwa[rsel[[i]], ]
+  
+  # Adjust species factor if necessary so that if species occur at different sites they are treated differently
+  #if (sppFac == 'SpeciesSite') td$Species <- td$Sp.Site
+  
+  # Record the number of observations and species
+  stres$Nobs[i] <- nrow(td)
+  spp <- sort(unique(td$Species))
+  stres$Nspec[i] <- length(spp)
+  
+  # Prepare a dataframe to store species-specific results
+  spres[[i]] <- data.frame(
+    study = rep(slabel[i], length(spp)),
+    species = spp,
+    Nobs = NA,
+    minWP = NA,
+    critWP = NA,
+    minLFM = NA,
+    model1.int = NA,
+    model1.slp = NA,
+    model2.int = NA,
+    model2.slp = NA
+  )
+  
+  # Fit a model without interaction to test if species have different intercepts
+  fit1 <- glm(ilfm ~ mwp * Species, data = td)
+  stres$BIC.no.int[i] <- BIC(fit1)  # Store Bayesian Information Criterion
+  stres$common.slope[i] <- coefficients(fit1)[2]  # Common slope across species
+  scoeff[[i]] <- coefficients(fit1)  # Store coefficients
+  pvals[[i]] <- fit1$fitted.values  # Store fitted values
+
+# Extract and store intercepts for each species
+  spres[[i]]$model1.int[1] <- coefficients(fit1)[1]
+  spres[[i]]$model1.int[-1] <- coefficients(fit1)[1] + coefficients(fit1)[-c(1:2)]
+  spres[[i]]$model1.slp <- coefficients(fit1)[2]
+  
+  # Fit a model with interaction to test if species have different slopes
+  fit2 <- glm(ilfm ~ mwp * Species, data = td)
+  stres$BIC.int[i] <- BIC(fit2)
+  
+  # Set up plotting parameters
+ # op = par(mar = c(5, 5, 3, 1))
+  
+  # Fit a simple model for plotting purposes
+ # fit <- glm(ilfm ~ mwp, data = td)
+ # mm <- range(td$mwp, na.rm = TRUE)
+ # summary(fit)
+  
+  # Generate data for plotting the inverse relationship
+ # xy <- inversePlotData(mm, coefficients(fit))
+  
+  # # Plot the data and model fit
+  # if (pform == 'Reg') {
+  #   # Plot regular LFM vs. MWP
+  #   plot(lfm ~ mwp, data = td, main = slabel[i],
+  #        xlim = c(-8, 0), ylim = c(0, 4),
+  #        ylab = 'LFM', xlab = 'MWP')
+  #   abline(h = 0.7, lty = 2)  # Add horizontal line at LFM = 0.7
+  #   lines(LFM ~ MWP, data = xy, lwd = 3, col = 'red')  # Add fitted line
+  #   points(lfm ~ mwp, data = td, pch = 19, col = 'black')  # Data points
+  # 
+  #   # Add species-specific lines colored by site
+  #   for (species in spp) {
+  #     species_data <- td[td$Species == species, ]
+  #     species_fit <- glm
+  #     
+  #     # Add species-specific lines colored by site
+  #     for (species in spp) {
+  #       species_data <- td[td$Species == species, ]
+  #       species_fit <- glm(ilfm ~ mwp, data = species_data)
+  #       species_xy <- inversePlotData(mm, coefficients(species_fit))
+  #       lines(LFM ~ MWP, data = species_xy, col = unique(species_data$scolors), lwd = 1)
+  #     }
+  #     
+  #     # Add the legend
+  #     legend('topleft', legend = unique(td$study), col = unique(td$scolors), pch = 19)
+  #   }
+  # }
+  
+  # Increment the counter
+  i <- i + 1
+}
+
+# Reset graphical parameters
+par(op)
+
+# Display the statistical results
+stres
+spres[[1]]  # Results for the first subset
+spres[[4]]  # Results for the fourth subset (i = 4)
+
+# Combine species-specific results into one dataframe
+spres.all <- spres[[1]]
+for (i in 2:length(spres)) spres.all <- rbind(spres.all, spres[[i]])
+
+# Check dimensions and content of the combined results
+dim(spres.all)
+table(spres.all$study)
+head(spres.all)
+tail(spres.all)
+
+# Create a shortened species code for easier reference
+spres.all$SpCode6 <- substr(spres.all$species, 1, 6)
+
+#Select only the columns that we need: 
+coef_values_df <- spres.all %>% 
+  filter(study == "All") %>% 
+  select(study, species, model1.int, model1.slp) %>% 
+  separate(species, into = c("species", "study2"), sep = "_") %>% 
+  select(-study2)
+```
+
+
+```{r}
+# Prepare for analyses by site
+sites <- sort(unique(lwa$study))  # Re-affirm the list of study sites
+table(lwa$study)  # Check the distribution of observations
+
+# Create a new logical column indicating if the site is coastal
+lwa$coastal <- TRUE
+lwa$coastal[which(lwa$study == 'SEKI')] <- FALSE  # Mark 'SEKI' as non-coastal
+
+# Initialize lists and labels for storing results
+rsel <- list()  # List to hold row indices for each analysis subset
+slabel <- sites  # Labels corresponding to each subset
+
+# Populate 'rsel' with row indices for each site
+for (i in 1:length(sites)) {
+  rsel[[i]] <- which(lwa$study == sites[i])
+}
+
+# Add indices for coastal sites
+i <- i + 1
+rsel[[i]] <- which(lwa$coastal)
+
+# Add indices for all data
+i <- i + 1
+rsel[[i]] <- 1:nrow(lwa)
+
+# Update labels accordingly
+slabel <- c(slabel, 'Coastal', 'All')
+
+# Confirm that 'rsel' and 'slabel' are correctly set up
+length(rsel)
+slabel
+
+# Initialize data structures to store statistical results
+stres <- data.frame(
+  study = slabel,
+  Nspec = NA,
+  Nobs = NA,
+  BIC.no.int = NA,
+  common.slope = NA,
+  BIC.int = NA
+)
+
+spres <- list()  # List to hold species-specific results
+scoeff <- list()  # List to hold coefficients from models
+pvals <- list()  # List to hold predicted values from models
+
+# Define parameters for model forms and factors
+pform <- 'Inv'  # Model form: 'Reg' for regular, could be 'Inv' for inverse
+sppFac <- 'Species'  # Species factor, could be 'Species' or 'SpeciesSite'
+slpModel <- 'SpSpecific'  # Slope model: 'Common' or 'SpSpecific'
+
+# Initialize the loop counter
+i = 6
+
+# Loop through each subset defined in 'rsel'
+for (i in 1:length(rsel)) {
+  # Subset the data for the current selection
+  td <- lwa[rsel[[i]], ]
+  
+  # Adjust species factor if necessary so that if species occur at different sites they are treated differently
+  #if (sppFac == 'SpeciesSite') td$Species <- td$Sp.Site
+  
+  # Record the number of observations and species
+  stres$Nobs[i] <- nrow(td)
+  spp <- sort(unique(td$Species))
+  stres$Nspec[i] <- length(spp)
+  
+  # Prepare a dataframe to store species-specific results
+  spres[[i]] <- data.frame(
+    study = rep(slabel[i], length(spp)),
+    species = spp,
+    Nobs = NA,
+    minWP = NA,
+    critWP = NA,
+    minLFM = NA,
+    model1.int = NA,
+    model1.slp = NA,
+    model2.int = NA,
+    model2.slp = NA
+  )
+  
+  # Fit a model without interaction to test if species have different intercepts
+  fit1 <- glm(ilfm ~ mwp * Species, data = td)
+  stres$BIC.no.int[i] <- BIC(fit1)  # Store Bayesian Information Criterion
+  stres$common.slope[i] <- coefficients(fit1)[2]  # Common slope across species
+  scoeff[[i]] <- coefficients(fit1)  # Store coefficients
+  pvals[[i]] <- fit1$fitted.values  # Store fitted values
+
+# Extract and store intercepts for each species
+  spres[[i]]$model1.int[1] <- coefficients(fit1)[1]
+  spres[[i]]$model1.int[-1] <- coefficients(fit1)[1] + coefficients(fit1)[-c(1:2)]
+  spres[[i]]$model1.slp <- coefficients(fit1)[2]
+  
+  # Fit a model with interaction to test if species have different slopes
+  fit2 <- glm(ilfm ~ mwp * Species, data = td)
+  stres$BIC.int[i] <- BIC(fit2)
+  
+  # Set up plotting parameters
+ # op = par(mar = c(5, 5, 3, 1))
+  
+  # Fit a simple model for plotting purposes
+ # fit <- glm(ilfm ~ mwp, data = td)
+ # mm <- range(td$mwp, na.rm = TRUE)
+ # summary(fit)
+  
+  # Generate data for plotting the inverse relationship
+ # xy <- inversePlotData(mm, coefficients(fit))
+  
+  # # Plot the data and model fit
+  # if (pform == 'Reg') {
+  #   # Plot regular LFM vs. MWP
+  #   plot(lfm ~ mwp, data = td, main = slabel[i],
+  #        xlim = c(-8, 0), ylim = c(0, 4),
+  #        ylab = 'LFM', xlab = 'MWP')
+  #   abline(h = 0.7, lty = 2)  # Add horizontal line at LFM = 0.7
+  #   lines(LFM ~ MWP, data = xy, lwd = 3, col = 'red')  # Add fitted line
+  #   points(lfm ~ mwp, data = td, pch = 19, col = 'black')  # Data points
+  # 
+  #   # Add species-specific lines colored by site
+  #   for (species in spp) {
+  #     species_data <- td[td$Species == species, ]
+  #     species_fit <- glm
+  #     
+  #     # Add species-specific lines colored by site
+  #     for (species in spp) {
+  #       species_data <- td[td$Species == species, ]
+  #       species_fit <- glm(ilfm ~ mwp, data = species_data)
+  #       species_xy <- inversePlotData(mm, coefficients(species_fit))
+  #       lines(LFM ~ MWP, data = species_xy, col = unique(species_data$scolors), lwd = 1)
+  #     }
+  #     
+  #     # Add the legend
+  #     legend('topleft', legend = unique(td$study), col = unique(td$scolors), pch = 19)
+  #   }
+  # }
+  
+  # Increment the counter
+  i <- i + 1
+}
+
+# Reset graphical parameters
+par(op)
+
+# Display the statistical results
+stres
+spres[[1]]  # Results for the first subset
+spres[[4]]  # Results for the fourth subset (i = 4)
+
+# Combine species-specific results into one dataframe
+spres.all <- spres[[1]]
+for (i in 2:length(spres)) spres.all <- rbind(spres.all, spres[[i]])
+
+# Check dimensions and content of the combined results
+dim(spres.all)
+table(spres.all$study)
+head(spres.all)
+tail(spres.all)
+
+# Create a shortened species code for easier reference
+spres.all$SpCode6 <- substr(spres.all$species, 1, 6)
+
+#Select only the columns that we need: 
+coef_values_df <- spres.all %>% 
+  filter(study == "All") %>% 
+  select(study, species, model1.int, model1.slp) %>% 
+  separate(species, into = c("species", "study2"), sep = "_") %>% 
+  select(-study2)
+```
+
+Above chunk is the code to run get the slope and intercepts of linear relationships between Psi and 1/LFM into a dataframe (spres.all). 
+
+Now get the MinLFM and MinMPa into that dataset too: 
+
+```{r}
+min_values_df <- lwa %>% 
+  clean_names() %>% 
+  group_by(sp_site) %>% 
+  mutate(minlfm = min(lfm, na.rm = T),
+         minwp = min(mwp, na.rm = T), 
+         minilfm = 1/minlfm
+         ) %>% 
+  select(species, date, mwp, lfm, study, sp_site, ilfm, minlfm, minilfm, minwp) 
+  
+
+#Combine min values dataset with the slope datasetl 
+
+concept_df <- merge(min_values_df, coef_values_df, by = c("species", "study"), all = T) %>% 
+  select(-mwp, -lfm, -date, -ilfm) %>% 
+  distinct() %>% 
+  group_by(species) %>% 
+  fill(c(4:6), .direction = "downup") %>% 
+  filter(!(study %in% c("All", "Coastal"))) #remove coastal and all designated rows
+  
+concept_df %>% 
+  ggplot(aes(y = model1.int, x = model1.slp, color = study)) +
+  geom_point() 
+
+library(GGally)
+#install.packages("GGally")
+ggpairs(concept_df,
+        columns = c(4:8),
+        #ggplot2::aes(colour = study), 
+        cardinality_threshold = 50, 
+        progress = F)
+```
+#Q1: 
+What are the aggregate and species-level relationships between leaf water potentials and live fuel moisture, and how do they compare across studies? 
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(lme4)
+#install.packages("lme4")
+
+rm(list = ls())
+
+# Load the data
+lwa <- read.csv(here("data", "all-data-combined.csv")) %>% 
+  mutate(group = case_when(study %in% c("SEKI") ~ "Sierra", 
+                   TRUE ~ "Coastal")) %>% 
+  mutate(year = year(date), 
+         year = as.character(year)) %>%  #separate SEKI years
+   unite(Sp.Site.Year, c("Sp.Site", year), remove = F) %>%
+   mutate(ilfm = 1 / lfm) #%>% # Add calculated inverse LFM %>% 
+  #filter(!(year %in% c("2021") & study %in% c("SEKI"))) #something is a bit odd about SEKI in 2021 (high LFMS at low MPas...kinda weird?)
+
+
+lwa %>% 
+  filter(study == "SEKI") %>% 
+  ggplot(aes(y = lfm, x = Sp.Site.Year, color = Sp.Site.Year)) +
+  geom_boxplot()
+
+lwa %>% 
+  filter(study == "SEKI") %>% 
+  ggplot(aes(y = lfm, x = mwp, color = Sp.Site.Year)) +
+  facet_wrap(~Species, scales = "free") + 
+  geom_point(alpha = .5) +
+  geom_smooth(method = "lm", se = F)
+```
+
+
+```{r}
+##1) Is it better to have interactions between species vs. not?
+
+m1_ints <- lm(ilfm ~ mwp*Species, lwa)
+#plot(m1_ints)
+AIC(m1_ints)
+#BIC(m1_ints)
+
+m2_noints <- lm(ilfm ~ mwp + Species, lwa)
+AIC(m2_noints)
+#BIC(m2_noints)
+
+m2_nospp <- lm(ilfm ~ mwp, lwa)
+#plot(m2_nospp)
+AIC(m2_nospp)
+#BIC(m2_nospp)
+
+AIC(m1_ints, m2_noints, m2_nospp)
+```
+
+
+```{r}
+#Best model with SEKI species included is the model with different slopes and intercepts for each species. 
+
+###1a) Is this different if we just look at Coastal species? 
+
+lwa_coastal <- lwa %>% 
+  filter(group == "Coastal")
+
+m1_ints <- lm(ilfm ~ mwp*Species, lwa_coastal)
+#plot(m1_ints)
+AIC(m1_ints)
+#BIC(m1_ints)
+
+m2_noints <- lm(ilfm ~ mwp + Species, lwa)
+AIC(m2_noints)
+#BIC(m2_noints)
+
+m2_nospp <- lm(ilfm ~ mwp, lwa)
+plot(m2_nospp)
+AIC(m2_nospp)
+#BIC(m2_nospp)
+
+AIC(m1_ints, m2_noints, m2_nospp)
+
+#Best model with just coastal is the model with different intercepts per species, but common slope.
+```
+
+
+```{r}
+##2) Create a dataframe with species, study, or combined slopes and intercepts. 
+
+# Initialize the final dataframe to store results
+final_df1 <- lwa %>%
+  select(Species, study, Sp.Site) %>%
+  distinct()
+
+# Function to fit model and extract slope & intercept
+fit_model <- function(data, formula) {
+  model <- glm(formula, data = data)
+  coef(model)[1:2]  # return intercept and slope
+}
+
+# Model 1: Fit for each Sp.Site
+sp_site_model <- lwa %>%
+  group_by(Sp.Site) %>%
+  do(model = fit_model(., ilfm ~ mwp)) %>%
+  mutate(int_sppstudy = model[1],
+         slope_sppstudy = model[2]) %>%
+  select(Sp.Site, int_sppstudy, slope_sppstudy)
+
+min_values <- lwa %>% 
+  group_by(Sp.Site) %>%
+  mutate(min_mwp = min(mwp, na.rm = TRUE),
+         min_lfm = min(lfm, na.rm = TRUE),
+         n = n()) %>%
+  select(Sp.Site, min_mwp, min_lfm, n)
+
+
+# Model 2: Fit for each study
+study_model <- lwa %>%
+  group_by(study) %>%
+  do(model = fit_model(., ilfm ~ mwp)) %>%
+  mutate(int_study = model[1],
+         slope_study = model[2]) %>%
+  select(study, int_study, slope_study)
+
+# Model 3: Fit for each species
+species_model <- lwa %>%
+  group_by(Species) %>%
+  do(model = fit_model(., ilfm ~ mwp)) %>%
+  mutate(int_spp = model[1],
+         slope_spp = model[2]) %>%
+  select(Species, int_spp, slope_spp)
+
+# Model 4: Fit for all data combined
+all_data_model <- fit_model(lwa, ilfm ~ mwp)
+int_all <- all_data_model[1]
+slope_all <- all_data_model[2]
+
+# Combine all results into the final dataframe
+final_df <- final_df1 %>%
+  left_join(sp_site_model, by = "Sp.Site") %>%
+  left_join(min_values, by = "Sp.Site") %>%
+  left_join(study_model, by = "study") %>%
+  left_join(species_model, by = "Species") %>%
+  mutate(int_all = int_all, slope_all = slope_all) %>% 
+  clean_names() %>% 
+  distinct() %>% 
+  mutate(min_ilfm = 1/min_lfm)
+
+# Display the final dataframe
+print(final_df)
+
+final_df %>% 
+ggplot(aes(y = int_sppstudy, x = slope_sppstudy, color = study)) +
+  geom_point()
+
+final_df %>% 
+ggplot(aes(y = int_sppstudy, x = slope_sppstudy, color = study)) +
+  geom_point()
+```
+
+#Q2: 
+
+Across species, what are the contributions of initial LFM and minimum WP to explain variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2)? 
+
+```{r}
+final_df %>% 
+  ggplot(aes(y = int_spp, 
+             x = min_lfm, 
+            )) +
+  geom_point(aes( color = species)) +
+  geom_smooth(method = "lm", se  = F)
+#initial LFM does not well explain end of season LFM
+
+final_df %>% 
+  ggplot(aes(y = int_spp, 
+             x = min_mwp, 
+            )) +
+  geom_point(aes( color = species)) +
+  geom_smooth(method = "lm", se  = F)
+#Initial LFM does seem to kinda explain
+head(spres)
+```
+Separate slopes for isoclines per species (probably not what we want to do though, v messy looking)
+```{r}
+# Source custom functions if needed
+source(here('scripts', 'lfm_functions.R'))
+
+# Read species results
+spres_old <- read.csv(here('results', 'species-results.csv'))
+
+# Ensure 'spres' has all the necessary columns from the previous steps
+spres <- final_df %>% 
+  mutate(model1.int = int_spp,
+         model1.slp = slope_spp,  # Ensure slope is named 'model1.slp'
+         model2.int = int_sppstudy, 
+         model2_slp = slope_sppstudy, 
+         SpCode6 = species, 
+         minWP = min_mwp)
+
+# Inspect the modified dataframe
+head(spres)
+
+# Generate a sequence of inverse LFM saturation values
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
+
+# Initialize an empty list to store critical MWP values for each species
+MWPcrit_list <- list()
+
+# Loop through each unique species and calculate the critical MWP using species-specific slopes
+for (sp in unique(spres$species)) {
+  
+  # Get the species-specific slope from 'spres'
+  species_slope <- spres %>% 
+    filter(species == sp) %>% 
+    pull(model1.slp)
+  
+  # Initialize a vector to hold critical MWP values for the current species
+  MWPcrit <- c()
+  
+  # Calculate critical MWP for the current species
+  for (i in 1:length(ilfm.sat.vec)) {
+    MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.7)  # Use species-specific slope
+  }
+  
+  # Store the results for each species in the list
+  MWPcrit_list[[sp]] <- MWPcrit
+}
+
+# Example: Extract MWPcrit for a specific species (e.g., "species1")
+# MWPcrit_list[["species1"]]
+
+# Convert inverse LFM saturation values back to LFM
+lfm.sat.vec <- 1 / ilfm.sat.vec
+
+# Plot the conceptual model for each species using its own slope
+plot(MWPcrit_list[[1]], lfm.sat.vec, xlim = c(-8, 0), ylim = c(0, 4),
+     type = 'l', lwd = 2, xlab = 'Minimum MWP (MPa)', ylab = 'LFM @ MWP = 0')
+
+# Add lines for each species
+for (sp in unique(spres$species)) {
+  lines(MWPcrit_list[[sp]], lfm.sat.vec, lwd = 1)  # Add lines for each species
+}
+
+# Add species data points to the conceptual model plot
+text(I(1 / model1.int) ~ minWP, data = spres,
+     labels = spres$species, col = 'blue')  # Add species codes as labels
+
+
+```
+
+
+Using common slope for all species: 
+```{r}
+#Isoclines: At what combination of Min WP and Saturated LFM do the observed minimum LFM values occur? 
+### Conceptual Model for Linking Minimum Water Potential (MWP) and Live Fuel Moisture (LFM)
+# This script models the relationship between minimum water potential (MWP) and live fuel moisture (LFM).
+# It fits species-specific and study-specific models to estimate the slope and intercept,
+# while also integrating a conceptual model to illustrate how LFM saturates as MWP decreases.
+
+# Source custom functions (assumed to have been pre-defined in 'lfm_functions.R')
+# These might include functions like solveForX used later in the conceptual model
+source(here('scripts', 'lfm_functions.R'))
+
+# Load previously calculated species-specific results for comparison or further analysis
+spres_old <- read.csv(here('results', 'species-results.csv'))
+
+# Step 1: Build the new dataframe to store slope and intercepts for the conceptual model
+# 'final_df' contains outputs from the previously discussed analyses (species-site, study, species-level models)
+
+spres <- final_df %>%
+  # Prepare the dataframe to include the necessary columns for further analysis
+  mutate(model1.int = int_spp,            # Intercept for species-level model
+         model1.slp = slope_spp,          # Slope for species-level model
+         model2.int = int_sppstudy,       # Intercept for species-site model
+         model2.slp = slope_sppstudy,     # Slope for species-site model
+         SpCode6 = species,               # Adding species code or label
+         minWP = min_mwp)                 # Store minimum MWP for each species-site combination
+
+# Preview the first few rows of the dataframe to check the structure
+head(spres)
+
+# Step 2: Define a common slope for the conceptual model (hypothetical or empirically derived)
+
+# This slope will be used to estimate the relationship between inverse LFM saturation (ilfm) and MWP
+#slp <- -0.198 #old slope, no seki
+slp <- -0.186
+
+# Step 3: Generate a sequence of inverse LFM saturation values (ilfm.sat.vec)
+# This vector represents a range of LFM saturation values (inverse) over which MWP will be estimated
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
+
+# Step 4: Initialize an empty vector 'MWPcrit' to store the calculated critical MWP values
+# These critical MWP values correspond to different LFM saturation thresholds
+MWPcrit <- c()
+
+# Step 5: Use a for loop to calculate critical MWP values
+# The function 'solveForX' calculates MWP for a given ilfm value and slope (with a threshold of 1/0.7)
+# The threshold of 1/0.7 is used to represent a reference LFM value (e.g., 70% moisture).
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1 / 0.9)
+}
+
+# Step 6: Convert inverse LFM saturation back to LFM
+# Since we are working with inverse LFM values, we convert them back to their actual LFM values (1/ilfm)
+lfm.sat.vec <- 1 / ilfm.sat.vec
+
+# Step 7: Plot the conceptual model curve
+# This plot visualizes the relationship between minimum MWP and LFM based on the estimated slope and intercept
+plot(MWPcrit, lfm.sat.vec, xlim = c(-8, 0), ylim = c(0, 4),  # Set plot limits for axes
+     type = 'l', lwd = 2,                                   # Line plot with a thick line width
+     xlab = 'Minimum MWP (MPa)',                            # X-axis label (MWP in MPa)
+     ylab = 'LFM @ MWP = 0')                                # Y-axis label (LFM when MWP = 0)
+
+# Step 8: Repeat the calculations for different LFM thresholds
+# Here, different thresholds are used (e.g., 0.5, 1.0) to simulate how the relationship changes with LFM.
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1 / 0.6)  # New threshold of 1/0.5 (e.g., 50% LFM)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, xlim = c(-8, 0), ylim = c(0, 4), lwd = 1)  # Add a line to the plot for this threshold
+
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1 / 1)    # New threshold of 1/1 (e.g., 100% LFM)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, xlim = c(-8, 0), ylim = c(0, 4), lwd = 1)  # Add a line for this threshold
+
+# Step 9: Add species data points to the conceptual model plot
+# The points represent observed data for different species and their corresponding MWP and LFM.
+# Here, you can filter data by study or other criteria and plot them.
+# Replace 'letters' with actual labels or data as needed
+# You might filter by 'Coastal' or other specific groups depending on your dataset
+# points(I(1 / model1.int) ~ minWP, data = spres[which(spres$study == 'Coastal'), ], pch = 19)
+
+# # Add labels for species points to the plot (use species codes or other identifiers)
+# text(I(1 / model1.int) ~ minWP, data = spres,   # Text labels instead of points for clarity
+#      labels = letters)                          # Replace 'letters' with actual species labels or codes
+
+#Add points
+#points(I(1 / model1.int) ~ minWP, data = spres, pch = 19)
+
+#-----------
+# Plot species-specific data points
+# We are using the 'minWP' (Minimum MWP) for each species and inverting the model intercepts (1 / model1.int) for plotting.
+# Replace the 'letters' argument with the species codes from the 'SpCode6' column in 'spres' dataframe.
+
+
+text(I(1 / model1.int) ~ minWP,  # Inverse of intercept plotted against minimum MWP
+     data = spres,               # Data from the spres dataframe
+     labels = spres$SpCode6,     # Use species codes from the SpCode6 column for labeling
+     pos = 4, 
+     size = 1)
+#-----------
+# Create a mapping of letters to species codes
+
+letter_mapping <- data.frame(
+  letter = letters[1:nrow(spres)],  # Use the first 'n' letters based on the number of rows in 'spres'
+  species_code = spres$SpCode6      # Corresponding species codes from the 'SpCode6' column
+)
+
+# Display the mapping to know what each letter represents
+print(letter_mapping)
+```
+
+#Q3:
+
+How strongly are the species parameters associated with three critical plant traits related to drought tolerance: Leaf Dry Matter Content (LDMC), water potential at 50% loss of conductivity (Ψ50), and osmotic potential at turgor loss point (πTLP).
+
+
+```{r}
+#read in trait df
+traits_df <- read_csv(here("data", "species-traits-withseki.csv")) %>% 
+  clean_names() %>% 
+  mutate(species = sp_code) %>% 
+  mutate(swc = (1/ldmc)-1) %>% 
+  filter(sla < 20)
+
+#Attach trait data to model data: 
+q3_df <- merge(final_df, traits_df, by = ("species"), all = T)
+  
+#Look at it: 
+#-------------------
+
+###TLP and slope: 
+q3_df %>% 
+ggplot(aes(y = slope_spp, x = psi_tlp)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###TLP and int: 
+q3_df %>% 
+ggplot(aes(y = int_spp, x = psi_tlp)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###TLP and minLFm: 
+q3_df %>% 
+ggplot(aes(y = min_lfm, x = psi_tlp)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###TLP and minWP: 
+q3_df %>% 
+ggplot(aes(y = min_mwp, x = psi_tlp)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+#-------------------
+
+###LDMC and slope: 
+q3_df %>% 
+ggplot(aes(y = slope_spp, x = ldmc)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###LDMC and int: 
+q3_df %>% 
+ggplot(aes(y = int_spp, x = ldmc)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###TLP and minLFm: 
+q3_df %>% 
+ggplot(aes(y = min_lfm, x = ldmc)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###TLP and minWP: 
+q3_df %>% 
+ggplot(aes(y = min_mwp, x = ldmc)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+#-------------------
+
+###SLA and slope: 
+q3_df %>% 
+ggplot(aes(y = slope_spp, x = sla)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###SLA and int: 
+q3_df %>% 
+ggplot(aes(y = int_spp, x = sla)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###SLA and minLFm: 
+q3_df %>% 
+ggplot(aes(y = min_lfm, x = sla)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###SLA and minWP: 
+q3_df %>% 
+ggplot(aes(y = min_mwp, x = sla)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+#-------------------
+
+###P50 and slope: 
+q3_df %>% 
+ggplot(aes(y = slope_spp, x = plc50_stem)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and int: 
+q3_df %>% 
+ggplot(aes(y = int_spp, x = plc50_stem)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and minLFm: 
+q3_df %>% 
+ggplot(aes(y = min_lfm, x = plc50_stem)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and minWP: 
+q3_df %>% 
+ggplot(aes(y = min_mwp, x = plc50_stem)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+#-------------------
+
+###P50 and slope: 
+q3_df %>% 
+ggplot(aes(y = slope_spp, x = dr_max_rooting_depth)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and int: 
+q3_df %>% 
+ggplot(aes(y = int_spp, x = dr_max_rooting_depth)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and minLFm: 
+q3_df %>% 
+ggplot(aes(y = min_lfm, x = dr_max_rooting_depth)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and minWP: 
+q3_df %>% 
+ggplot(aes(y = min_mwp, x = dr_max_rooting_depth)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+#-------------------
+
+###SWC and slope: 
+q3_df %>% 
+ggplot(aes(y = slope_spp, x = swc)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and int: 
+q3_df %>% 
+ggplot(aes(y = int_spp, x = swc)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and minLFm: 
+q3_df %>% 
+ggplot(aes(y = min_lfm, x = swc)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+
+###P50 and minWP: 
+q3_df %>% 
+ggplot(aes(y = min_mwp, x = swc)) +
+  geom_point(aes(color = functional_type))+
+  geom_smooth(method = "lm", se  = F)
+```
+
+##---------
+```{r}
+## Preliminary analysis of 2021 Live Fuel Moisture (LFM) data
+
+rm(list = ls())  # Remove all objects from the workspace to start fresh
+
+library(ggplot2)  # Load ggplot2 package for advanced plotting capabilities
+source(here('scripts', 'lfm_functions.R'))
+# Source custom functions from external script
+
+# Read in the combined dataset; 'as.is = TRUE' prevents strings from converting to factors
+# 'row.names = 1' uses the first column as row names
+lwa <- read.csv(here('data', 'all-data-combined.csv'))
+
+# Calculate the inverse of LFM for modeling purposes
+lwa$ilfm <- 1 / lwa$lfm
+
+# Display the first few rows of the data to check if it's loaded correctly
+head(lwa)
+
+# Create a frequency table of the 'study' variable
+table(lwa$study)
+
+# Get a sorted list of unique study sites
+sites <- sort(unique(lwa$study))
+
+# Verify the number of observations per study
+table(lwa$study)
+
+# Check the total number of observations
+nrow(lwa)
+
+### Plotting by Site
+
+# Define colors for each site for consistent plotting
+scolors <- c("#B9C7E2", "#ECAB99",  "#5B6530", "#9484B1",  "#F1C100")  # Added color for SEKI
+
+# Assign colors to each observation based on the study site
+lwa$scolors <- scolors[match(lwa$study, sites)]
+
+# Confirm that colors are assigned correctly
+table(lwa$scolors)
+
+# Randomly sample 1000 observations for plotting to avoid overplotting
+rsamp <- sample(1:nrow(lwa), 1000)  # Sample from the full dataset
+
+# Set up an empty plot with defined axes and limits
+plot(lfm ~ mwp, data = lwa, type = 'n',
+     xlab = 'Midday water potential (MPa)',
+     ylab = 'Live fuel moisture',
+     xlim = c(-8, 0), ylim = c(0, 3.5))
+
+# Plot data points for each study site with different symbols and colors
+points(lfm ~ mwp, data = lwa[lwa$study == 'Sedgwick', ],
+       pch = 5, cex = 1, col = lwa$scolors[lwa$study == 'Sedgwick'])
+
+points(lfm ~ mwp, data = lwa[lwa$study == 'StuntRanch', ],
+       pch = 15, cex = 1, col = lwa$scolors[lwa$study == 'StuntRanch'])
+
+points(lfm ~ mwp, data = lwa[lwa$study == 'Pepperwood', ],
+       pch = 19, cex = 1.2, col = lwa$scolors[lwa$study == 'Pepperwood'])
+
+# Include SEKI in the points plotting
+points(lfm ~ mwp, data = lwa[lwa$study == 'SEKI', ],
+       pch = 17, cex = 1.2, col = lwa$scolors[lwa$study == 'SEKI'])  # Different symbol for SEKI
+
+# Add a legend to the plot
+legend(-7, 3, sites, fill = NULL, border = 'white')
+
+# Add custom legend symbols corresponding to each site
+points(rep(-6.7, length(sites)), seq(2.84, 2.64 - 0.2 * (length(sites) - 1), length.out = length(sites)),
+       pch = c(19, 5, 15, 17), col = scolors, cex = 2)  # Added SEKI symbol
+
+
+
+
+
+# Prepare for analyses by site and species
+sites <- sort(unique(lwa$Sp.Site))  # Re-affirm the list of species at each site
+table(lwa$study)  # Check the distribution of observations
+
+# Create a new logical column indicating if the site is coastal
+lwa$coastal <- TRUE
+#lwa$coastal[which(lwa$study == 'SEKI')] <- FALSE  # Mark 'SEKI' as non-coastal
+
+# Initialize lists and labels for storing results
+rsel <- list()  # List to hold row indices for each analysis subset
+slabel <- sites  # Labels corresponding to each subset
+
+# Populate 'rsel' with row indices for each site
+for (i in 1:length(sites)) {
+  rsel[[i]] <- which(lwa$Sp.Site == sites[i])
+}
+
+# # Add indices for coastal sites
+# i <- i + 1
+# rsel[[i]] <- which(lwa$coastal)
+
+# Add indices for all data
+i <- i + 1
+#rsel[[i]] <- 1:nrow(lwa)
+
+# Update labels accordingly
+slabel <- c(slabel)
+
+# Confirm that 'rsel' and 'slabel' are correctly set up
+length(rsel)
+slabel
+
+# Initialize data structures to store statistical results
+stres <- data.frame(
+  study = slabel,
+  Nspec = NA,
+  Nobs = NA,
+  BIC.no.int = NA,
+  common.slope = NA,
+  BIC.int = NA
+)
+
+spres <- list()  # List to hold species-specific results
+scoeff <- list()  # List to hold coefficients from models
+pvals <- list()  # List to hold predicted values from models
+
+# Define parameters for model forms and factors
+pform <- 'Inv'  # Model form: 'Reg' for regular, could be 'Inv' for inverse
+sppFac <- 'SpeciesSite'  # Species factor, could be 'Species' or 'SpeciesSite'
+slpModel <- 'SpSpecific'  # Slope model: 'Common' or 'SpSpecific'
+
+# Initialize the loop counter
+i = 31
+
+# Loop through each subset defined in 'rsel'
+for (i in 1:length(rsel)) {
+  # Subset the data for the current selection
+  td <- lwa[rsel[[i]], ]
+  
+  # Adjust species factor if necessary
+  if (sppFac == 'SpeciesSite') td$Species <- td$Sp.Site
+  
+  # Record the number of observations and species
+  stres$Nobs[i] <- nrow(td)
+  spp <- sort(unique(td$Species))
+  stres$Nspec[i] <- length(spp)
+  
+  # Prepare a dataframe to store species-specific results
+  spres[[i]] <- data.frame(
+    study = rep(slabel[i], length(spp)),
+    species = spp,
+    Nobs = NA,
+    minWP = NA,
+    critWP = NA,
+    minLFM = NA,
+    model1.int = NA,
+    model1.slp = NA,
+    model2.int = NA,
+    model2.slp = NA
+  )
+  
+  # Fit a model without interaction to test if species have different intercepts
+  fit1 <- glm(ilfm ~ mwp, data = td)
+  stres$BIC.no.int[i] <- BIC(fit1)  # Store Bayesian Information Criterion
+  stres$common.slope[i] <- coefficients(fit1)[2]  # Common slope across species
+  scoeff[[i]] <- coefficients(fit1)  # Store coefficients
+  pvals[[i]] <- fit1$fitted.values  # Store fitted values
+  
+  # Extract and store intercepts for each species
+  spres[[i]]$model1.int[1] <- coefficients(fit1)[1]
+  spres[[i]]$model1.int[-1] <- coefficients(fit1)[1] + coefficients(fit1)[-c(1:2)]
+  spres[[i]]$model1.slp <- coefficients(fit1)[2]
+  
+}
+
+ s=1
+  for (s in 1:length(spp))
+  {
+    r1 <- which(td$Species==spp[s])
+    spres[[i]]$Nobs[s] <- length(r1)
+    spres[[i]]$minWP[s] <- min(td$mwp[r1],na.rm=T)
+    spres[[i]]$minLFM[s] <- min(td$lfm[r1],na.rm=T)
+    #print(c(i,length(r1)))
+    fit <- lm(ilfm[r1]~mwp[r1],data=td)
+    cfit <- coefficients(fit)
+    spres[[i]][s,c('model2.int','model2.slp')] <- cfit
+    mm <- range(td$mwp[r1],na.rm=T)
+    yy <- cfit[1] + cfit[2]*mm
+    
+    if (slpModel == 'SpSpecific') {
+      xy <- inversePlotData(mm,cfit) 
+      x0y <- inversePlotData(c(mm[2],0),cfit) 
+      spres[[i]]$critWP[s] <- solveForX(cfit,yval=1/0.7)
+    } else {
+      cs <- c(spres[[i]]$model1.int[s],spres[[i]]$model1.slp[s])
+      xy <- inversePlotData(mm,cs)
+      x0y <- inversePlotData(c(mm[2],0),cs)
+      spres[[i]]$critWP[s] <- solveForX(cs,yval=1/0.7)
+    }
+    
+    if (pform=='Reg') {
+      lines(LFM~MWP,data=xy,col=td$scolors[r1[1]],lwd=2) 
+      lines(LFM~MWP,data=x0y,col=td$scolors[r1[1]],lwd=2,lty=3) 
+    } else {
+      lines(iLFM~MWP,data=xy,col=td$scolors[r1[1]],lwd=2)
+      lines(iLFM~MWP,data=x0y,col=td$scolors[r1[1]],lwd=2,lty=3) 
+    }
+  }
+
+
+# Display the statistical results
+stres
+spres[[1]]  # Results for the first subset
+spres[[4]]  # Results for the fourth subset (i = 4)
+
+# Combine species-specific results into one dataframe
+spres.all <- spres[[1]]
+for (i in 2:length(spres)) spres.all <- rbind(spres.all, spres[[i]])
+
+# Check dimensions and content of the combined results
+dim(spres.all)
+table(spres.all$study)
+head(spres.all)
+tail(spres.all)
+
+# Create a shortened species code for easier reference
+spres.all$SpCode6 <- substr(spres.all$species, 1, 6)
+
+spres.all <- spres.all %>% 
+  separate(study, c("spp", "study"), sep = "_")
+```
+#---------
+
+#Davids code: 
+
+```{r, eval = F}
+## Preliminary analysis of 2021 Live Fuel Moisture (LFM) data
+
+#rm(list = ls())  # Remove all objects from the workspace to start fresh
+
+library(ggplot2)  # Load ggplot2 package for advanced plotting capabilities
+source(here('scripts', 'lfm_functions.R'))
+# Source custom functions from external script
+
+# Read in the combined dataset; 'as.is = TRUE' prevents strings from converting to factors
+# 'row.names = 1' uses the first column as row names
+lwa <- read.csv(here('data', 'all-data-combined.csv'))
+
+# Calculate the inverse of LFM for modeling purposes
+lwa$ilfm <- 1 / lwa$lfm
+
+# Display the first few rows of the data to check if it's loaded correctly
+head(lwa)
+
+# Create a frequency table of the 'study' variable
+table(lwa$study)
+
+# Remove data from the 'SEKI' study as per analysis requirement
+lwa <- lwa[-which(lwa$study == 'SEKI'),]
+
+# Get a sorted list of unique study sites
+sites <- sort(unique(lwa$study))
+
+# Verify the number of observations per study after removal
+table(lwa$study)
+
+# Check the total number of observations
+nrow(lwa)
+
+### Plotting by Site
+
+# Define colors for each site for consistent plotting
+scolors <- c('orange', 'black', 'blue')
+
+# Assign colors to each observation based on the study site
+lwa$scolors <- scolors[match(lwa$study, sites)]
+
+# Confirm that colors are assigned correctly
+table(lwa$scolors)
+
+# Randomly sample 1000 observations for plotting to avoid overplotting
+rsamp <- sample(1:1000, 1000)
+
+# Set up an empty plot with defined axes and limits
+plot(lfm ~ mwp, data = lwa, type = 'n',
+     xlab = 'Midday water potential (MPa)',
+     ylab = 'Live fuel moisture',
+     xlim = c(-8, 0), ylim = c(0, 3.5))
+
+# Uncomment the line below to plot sampled points with colors based on study site
+# points(lfm ~ mwp, data = lwa[rsamp, ], pch = 1, cex = 1, col = lwa$scolors)
+
+# Plot data points for each study site with different symbols and colors
+points(lfm ~ mwp, data = lwa[lwa$study == 'Sedgwick', ],
+       pch = 5, cex = 1, col = lwa$scolors[lwa$study == 'Sedgwick'])
+
+points(lfm ~ mwp, data = lwa[lwa$study == 'StuntRanch', ],
+       pch = 15, cex = 1, col = lwa$scolors[lwa$study == 'StuntRanch'])
+
+points(lfm ~ mwp, data = lwa[lwa$study == 'Pepperwood', ],
+       pch = 19, cex = 1.2, col = lwa$scolors[lwa$study == 'Pepperwood'])
+
+# Add a legend to the plot
+legend(-7, 3, sites, fill = NULL, border = 'white')
+
+# Add custom legend symbols corresponding to each site
+points(rep(-6.7, 3), c(2.84, 2.64, 2.44),
+       pch = c(19, 5, 15), col = scolors, cex = 2)
+
+# Prepare for analyses by site
+sites <- sort(unique(lwa$study))  # Re-affirm the list of study sites
+table(lwa$study)  # Check the distribution of observations
+
+# Create a new logical column indicating if the site is coastal
+lwa$coastal <- TRUE
+lwa$coastal[which(lwa$study == 'SEKI')] <- FALSE  # Mark 'SEKI' as non-coastal
+
+# Initialize lists and labels for storing results
+rsel <- list()  # List to hold row indices for each analysis subset
+slabel <- sites  # Labels corresponding to each subset
+
+# Populate 'rsel' with row indices for each site
+for (i in 1:length(sites)) {
+  rsel[[i]] <- which(lwa$study == sites[i])
+}
+
+# Add indices for coastal sites
+i <- i + 1
+rsel[[i]] <- which(lwa$coastal)
+
+# Add indices for all data
+i <- i + 1
+rsel[[i]] <- 1:nrow(lwa)
+
+# Update labels accordingly
+slabel <- c(slabel, 'Coastal', 'All')
+
+# Confirm that 'rsel' and 'slabel' are correctly set up
+length(rsel)
+slabel
+
+# Initialize data structures to store statistical results
+stres <- data.frame(
+  study = slabel,
+  Nspec = NA,
+  Nobs = NA,
+  BIC.no.int = NA,
+  common.slope = NA,
+  BIC.int = NA
+)
+
+spres <- list()  # List to hold species-specific results
+scoeff <- list()  # List to hold coefficients from models
+pvals <- list()  # List to hold predicted values from models
+
+# Define parameters for model forms and factors
+pform <- 'Reg'  # Model form: 'Reg' for regular, could be 'Inv' for inverse
+sppFac <- 'SpeciesSite'  # Species factor, could be 'Species' or 'SpeciesSite'
+slpModel <- 'SpSpecific'  # Slope model: 'Common' or 'SpSpecific'
+
+# Initialize the loop counter
+i = 4
+
+# Loop through each subset defined in 'rsel'
+# For demonstration, only running for i = 4
+# Uncomment the loop below to run for all subsets
+ for (i in 1:length(rsel))
+#for (i in 4:4) 
+  {
+  # Subset the data for the current selection
+  td <- lwa[rsel[[i]], ]
+  
+  # Adjust species factor if necessary
+  if (sppFac == 'SpeciesSite') td$Species <- td$Sp.Site
+  
+  # Record the number of observations and species
+  stres$Nobs[i] <- nrow(td)
+  spp <- sort(unique(td$Species))
+  stres$Nspec[i] <- length(spp)
+  
+  # Prepare a dataframe to store species-specific results
+  spres[[i]] <- data.frame(
+    study = rep(slabel[i], length(spp)),
+    species = spp,
+    Nobs = NA,
+    minWP = NA,
+    critWP = NA,
+    minLFM = NA,
+    model1.int = NA,
+    model1.slp = NA,
+    model2.int = NA,
+    model2.slp = NA
+  )
+  
+  # Fit a model without interaction to test if species have different intercepts
+  fit1 <- glm(ilfm ~ mwp + Species, data = td)
+  stres$BIC.no.int[i] <- BIC(fit1)  # Store Bayesian Information Criterion
+  stres$common.slope[i] <- coefficients(fit1)[2]  # Common slope across species
+  scoeff[[i]] <- coefficients(fit1)  # Store coefficients
+  pvals[[i]] <- fit1$fitted.values  # Store fitted values
+  
+  # Extract and store intercepts for each species
+  spres[[i]]$model1.int[1] <- coefficients(fit1)[1]
+  spres[[i]]$model1.int[-1] <- coefficients(fit1)[1] + coefficients(fit1)[-c(1:2)]
+  spres[[i]]$model1.slp <- coefficients(fit1)[2]
+  
+  # Fit a model with interaction to test if species have different slopes
+  fit2 <- glm(ilfm ~ mwp * Species, data = td)
+  stres$BIC.int[i] <- BIC(fit2)
+```
+
+Plot transformed and untransformed values: 
+```{r, eval = F}
+# Set up plotting parameters
+  op = par(mar = c(5, 5, 3, 1))
+  
+  # Fit a simple model for plotting purposes
+  fit <- glm(ilfm ~ mwp, data = td)
+  mm <- range(td$mwp, na.rm = TRUE)
+  summary(fit)
+  
+  # Generate data for plotting the inverse relationship
+  xy <- inversePlotData(mm, coefficients(fit))
+  
+  # Plot the data and model fit
+  if (pform == 'Reg') {
+    # Plot regular LFM vs. MWP
+    plot(lfm ~ mwp, data = td, main = slabel[i],
+         xlim = c(-8, 0), ylim = c(0, 4),
+         ylab = 'LFM', xlab = 'MWP')
+    abline(h = 0.7, lty = 2)  # Add horizontal line at LFM = 0.7
+    lines(LFM ~ MWP, data = xy, lwd = 3, col = 'red')  # Plot model fit
+  } else {
+    # Plot inverse LFM vs. MWP
+    plot(ilfm ~ mwp, data = td, main = slabel[i],
+         xlim = c(-8, 0), ylim = c(0, 2.5),
+         ylab = '1/LFM', xlab = 'MWP')
+    abline(h = 1 / 0.7, lty = 2)  # Threshold line at inverse LFM = 1/0.7
+    lines(iLFM ~ MWP, data = xy, lwd = 3, col = 'red')  # Plot model fit
+  }
+  
+  # Calculate mean midday water potential
+  mean(td$mwp, na.rm = TRUE)
+  
+  # Loop through each species to analyze species-specific relationships
+  s = 1
+  for (s in 1:length(spp)) {
+    # Select data for the current species
+    r1 <- which(td$Species == spp[s])
+    
+    # Record the number of observations and minimum values
+    spres[[i]]$Nobs[s] <- length(r1)
+    spres[[i]]$minWP[s] <- min(td$mwp[r1], na.rm = TRUE)
+    spres[[i]]$minLFM[s] <- min(td$lfm[r1], na.rm = TRUE)
+    
+    # Fit a linear model for the species
+    fit <- lm(ilfm[r1] ~ mwp[r1], data = td)
+    cfit <- coefficients(fit)
+    spres[[i]][s, c('model2.int', 'model2.slp')] <- cfit  # Store coefficients
+    
+    # Determine the range of MWP for plotting
+    mm <- range(td$mwp[r1], na.rm = TRUE)
+    yy <- cfit[1] + cfit[2] * mm  # Calculate fitted values
+    
+    # Depending on slope model, calculate inverse plot data and critical WP
+    if (slpModel == 'SpSpecific') {
+      xy <- inversePlotData(mm, cfit)
+      x0y <- inversePlotData(c(mm[2], 0), cfit)
+      spres[[i]]$critWP[s] <- solveForX(cfit, yval = 1 / 0.7)
+    } else {
+      cs <- c(spres[[i]]$model1.int[s], spres[[i]]$model1.slp[s])
+      xy <- inversePlotData(mm, cs)
+      x0y <- inversePlotData(c(mm[2], 0), cs)
+      spres[[i]]$critWP[s] <- solveForX(cs, yval = 1 / 0.7)
+    }
+    
+    # Add species-specific lines to the plot
+    if (pform == 'Reg') {
+      lines(LFM ~ MWP, data = xy, col = td$scolors[r1[1]], lwd = 2)
+      lines(LFM ~ MWP, data = x0y, col = td$scolors[r1[1]], lwd = 2, lty = 3)
+    } else {
+      lines(iLFM ~ MWP, data = xy, col = td$scolors[r1[1]], lwd = 2)
+      lines(iLFM ~ MWP, data = x0y, col = td$scolors[r1[1]], lwd = 2, lty = 3)
+    }
+  }
+  par(op)  # Reset plotting parameters
+}
+
+# Display the statistical results
+stres
+spres[[1]]  # Results for the first subset
+spres[[4]]  # Results for the fourth subset (i = 4)
+
+# Combine species-specific results into one dataframe
+spres.all <- spres[[1]]
+for (i in 2:length(spres)) spres.all <- rbind(spres.all, spres[[i]])
+
+# Check dimensions and content of the combined results
+dim(spres.all)
+table(spres.all$study)
+head(spres.all)
+tail(spres.all)
+
+# Create a shortened species code for easier reference
+spres.all$SpCode6 <- substr(spres.all$species, 1, 6)
+```
+
+Correlate species traits with physiological measurements
+
+```{r}
+# Subset the results to coastal sites
+td <- spres.all[which(spres.all$study == 'Coastal'), ]
+dim(td)
+
+# Plot minimum LFM against model intercept
+plot(minLFM ~ I(1 / model1.int), data = td)
+abline(h = 0.7)  # Add horizontal line at LFM = 0.7
+
+# Plot minimum LFM against minimum water potential
+plot(minLFM ~ minWP, data = td)
+abline(h = 0.7)
+
+# Plot model intercept against minimum water potential
+plot(I(1 / model1.int) ~ minWP, data = td)
+abline(h = 0.7)
+
+# Fit a generalized linear model
+fit <- glm(minLFM ~ minWP + model1.int, data = td)
+summary(fit)
+plot(fit)  # Diagnostic plots
+
+# Save the statistical summaries to CSV files
+write.csv(here(stres, 'results', 'summary-results.csv'))
+write.csv(here(spres.all, 'results', 'species-results.csv'))
+
+# Load species traits data
+spresc <- spres.all[which(spres.all$study == 'Coastal'), ]
+spt <- read.csv(here('data', 'species-traits.csv'))
+names(spt)
+
+# Match species codes and merge trait data
+s2s <- match(spresc$SpCode6, spt$SpCode)
+spresc$PLC50.stem <- spt$PLC50.stem[s2s]
+spresc$PSI.TLP <- spt$PSI.TLP[s2s]
+spresc$LDMC <- spt$LDMC[s2s]
+
+names(spresc)
+
+# Plotting relationships between traits and physiological measurements
+op = par(mfrow = c(1, 2))
+
+# Plot minimum WP against stem PLC50
+plot(minWP ~ PLC50.stem, data = spresc, pch = 19,
+     xlab = 'PLC50 (MPa)', ylab = 'Minimum MWP (MPa)')
+cor(spresc$minWP, spresc$PLC50.stem, use = 'pair')  # Correlation coefficient
+
+# Identify and exclude outliers (e.g., certain species)
+rsel <- which(spresc$SpCode6 %in% c('SALLEU', 'SALMEL'))
+cor(spresc$minWP[-c(rsel)], spresc$PLC50.stem[-c(rsel)], use = 'pair')
+points(minWP ~ PLC50.stem, data = spresc[rsel, ], pch = 1, cex = 2)
+
+# Plot model intercept against osmotic potential at turgor loss point (TLP)
+plot(I(1 / model1.int) ~ PSI.TLP, data = spresc, pch = 19,
+     xlab = 'Osmotic potential at TLP (MPa)',
+     ylab = 'LFM at MWP = 0')
+cor(1 / spresc$model1.int, spresc$PSI.TLP, use = 'pair')
+
+par(op)  # Reset plotting parameters
+
+# Plot minimum LFM against osmotic potential at TLP
+plot(minLFM ~ PSI.TLP, data = spresc, pch = 19,
+     xlab = 'Osmotic potential at TLP (MPa)',
+     ylab = 'LFM at MWP = 0')
+cor(spresc$minLFM, spresc$PSI.TLP, use = 'pair')
+cor(spresc$minLFM, spresc$PLC50.stem, use = 'pair')
+```
+
+Conceptual Model
+```{r}
+# Source custom functions again if needed
+source(here('scripts', 'lfm_functions.R'))
+
+# Read species results
+spres <- read.csv(here('results', 'species-results.csv'))
+head(spres)
+
+# Define a common slope for the conceptual model
+slp <- -0.198
+
+# Generate a sequence of inverse LFM saturation values
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 25)
+
+# Initialize a vector to hold critical MWP values
+MWPcrit <- c()
+
+# Calculate critical MWP for different LFM thresholds
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1 / 0.7)
+}
+
+# Convert inverse LFM saturation values back to LFM
+lfm.sat.vec <- 1 / ilfm.sat.vec
+
+# Plot the conceptual model curve
+plot(MWPcrit, lfm.sat.vec, xlim = c(-8, 0), ylim = c(0, 4),
+     type = 'l', lwd = 2,
+     xlab = 'Minimum MWP (MPa)', ylab = 'LFM @ MWP = 0')
+
+# Repeat calculations for different LFM thresholds (e.g., 0.5 and 1.0)
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1 / 0.5)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, xlim = c(-8, 0), ylim = c(0, 4), lwd = 1)
+
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1 / 1)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, xlim = c(-8, 0), ylim = c(0, 4), lwd = 1)
+
+# Add species data points to the conceptual model plot
+# Note: Replace 'letters' with actual labels or data as needed
+# points(I(1 / model1.int) ~ minWP, data = spres[which(spres$study == 'Coastal'), ], pch = 19)
+text(I(1 / model1.int) ~ minWP, data = spres[which(spres$study == 'Coastal'), ],
+     labels = letters)
+
+#### END HERE
+### 'spres.all' summarizes all results by site and species
+
 ```
 

@@ -49,7 +49,7 @@ BIC(fit)
 plot(pw$ilfm~pw$mwp)
 fit2 <- glm(ilfm~mwp * Species,data=pw)
 summary(fit2)
-#plot(fit2)
+plot(fit2)
 BIC(fit2) # much higher (less negative) - different slopes not supported
 
 # plot 

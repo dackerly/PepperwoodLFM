@@ -1,6 +1,4 @@
-library(MetBrewer)
 
-#
 #custom ggplot: 
 ggplot <- function(...) { ggplot2::ggplot(...) + 
     theme(panel.background = element_rect(fill='white', colour='black'), # Make background white and border black

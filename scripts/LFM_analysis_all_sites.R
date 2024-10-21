@@ -51,7 +51,7 @@ spres <- list()
 scoeff <- list()
 pvals <- list()
 
-pform <- 'Inv' # or c('Inv','Reg')
+pform <- 'Reg' # or c('Inv','Reg')
 sppFac <- 'SpeciesSite' # c('Species','SpeciesSite')
 slpModel <- 'SpSpecific' # c('Common','SpSpecific')
 
@@ -152,13 +152,17 @@ plot(I(1/model1.int)~minWP,data=td);abline(h=0.7)
 
 fit <- glm(minLFM~minWP+model1.int,data=td)
 summary(fit)
+plot(fit)
 
 write.csv(stres,'results/summary-results.csv')
 write.csv(spres.all,'results/species-results.csv')
 
 # correlate with traits
+
 spresc <- spres.all[which(spres.all$study=='Coastal'),]
+#spt <- read.csv('data/species-traits-withseki.csv')
 spt <- read.csv('data/species-traits.csv')
+
 names(spt)
 s2s <- match(spresc$SpCode6,spt$SpCode)
 spresc$PLC50.stem <- spt$PLC50.stem[s2s]
