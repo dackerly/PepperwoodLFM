@@ -1,18 +1,18 @@
-,LDMC,P12 (MPa),P50 (MPa),P88 (MPa),Pmin midday (Mpa),Pmin predawn (Mpa),Turgor loss point
-Adenostoma fasciculatum,0.526,-4.128,-7.404,-11.120,-5.932,NA,NA
-Arbutus menziesii,0.446,NA,NA,NA,NA,NA,NA
-Arctostaphylos glandulosa,NA,-1.112,-4.502,-12.854,-5.380,-6.280,NA
-Ceanothus cuneatus,0.471,-2.182,-7.585,-12.164,-7.987,-7.500,NA
-Ceanothus spinosus,NA,-1.381,-4.922,-7.894,-5.573,-4.700,NA
-Cercocarpus betuloides,0.495,NA,-6.615,NA,-6.800,NA,NA
-Eriogonum fasciculatum,0.379,NA,NA,NA,NA,NA,NA
-Heteromeles arbutifolia,0.525,-1.433,-5.800,-8.120,-5.427,NA,2.339
-Malosma laurina,NA,-0.285,-1.488,-2.982,-2.258,NA,NA
-Pseudotsuga menziesii,0.519,-2.119,-3.786,-4.851,-2.093,-1.235,NA
-Quercus agrifolia,0.555,NA,-1.683,NA,-3.120,NA,NA
-Quercus berberidifolia,NA,-0.321,-2.401,-5.203,-4.352,-3.740,NA
-Quercus douglasii,0.508,NA,NA,NA,NA,NA,NA
-Quercus durata,0.438,NA,NA,NA,NA,NA,NA
-Salvia leucophylla,NA,-0.415,-1.659,-4.149,-4.731,NA,NA
-Salvia mellifera,NA,-1.737,-4.532,-7.781,-7.558,-8.400,NA
-Umbellularia californica,0.524,NA,-1.215,NA,-2.400,NA,NA
+"","LDMC","P12 (MPa)","P50 (MPa)","P88 (MPa)","Pmin midday (Mpa)","Pmin predawn (Mpa)","Turgor loss point"
+"Adenostoma fasciculatum",0.5256,-4.127742848,-7.4037701751,-11.1197392566667,-5.93208333325,NA,NA
+"Arbutus menziesii",0.4455,NA,NA,NA,NA,NA,NA
+"Arctostaphylos glandulosa",NA,-1.111585014,-4.50187646033333,-12.85365796,-5.37958333325,-6.28,NA
+"Ceanothus cuneatus",0.47075,-2.18238930871429,-7.58488135507143,-12.1637335971429,-7.987,-7.5,NA
+"Ceanothus spinosus",NA,-1.381203739125,-4.92241453186667,-7.894496228375,-5.5725,-4.7,NA
+"Cercocarpus betuloides",0.49475,NA,-6.61512250154545,NA,-6.8,NA,NA
+"Eriogonum fasciculatum",0.379195694181818,NA,NA,NA,NA,NA,NA
+"Heteromeles arbutifolia",0.52475,-1.43253,-5.79968985555556,-8.11976,-5.42666666666667,NA,2.339322363
+"Malosma laurina",NA,-0.2851761415,-1.48802174426667,-2.98233980128571,-2.258125,NA,NA
+"Pseudotsuga menziesii",0.519410112359551,-2.11852549941379,-3.78579365510714,-4.85056335248148,-2.09285714285714,-1.234805,NA
+"Quercus agrifolia",0.55475,NA,-1.68259062933333,NA,-3.12,NA,NA
+"Quercus berberidifolia",NA,-0.320932437333333,-2.40128458411111,-5.20335692666667,-4.35166666675,-3.74,NA
+"Quercus douglasii",0.5075,NA,NA,NA,NA,NA,NA
+"Quercus durata",0.4376,NA,NA,NA,NA,NA,NA
+"Salvia leucophylla",NA,-0.414806307,-1.65885959533333,-4.148994414,-4.7308333335,NA,NA
+"Salvia mellifera",NA,-1.737409633,-4.53166038322222,-7.780571902,-7.55833333325,-8.4,NA
+"Umbellularia californica",0.523833333333333,NA,-1.21532605533333,NA,-2.4,NA,NA
