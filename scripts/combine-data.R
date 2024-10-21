@@ -4,13 +4,15 @@ rm(list=ls())
 spc <- read.csv('data/SpCodes.csv')
 head(spc)
 
-lw <- read.csv('data/PWD_Oct2021+Jun2022_LFM_WP_Calcs.csv',as.is=T)
+lw <- read.csv('data/PWD_Oct2021+Jun2022_LFM_WP_Calcs.csv',as.is=T) %>% 
+  mutate(date = ymd(Date))
 lw$SpCode6 <- spc$SpCode6[match(lw$Species,spc$Pepperwood.spp)]
 table(lw$Species,lw$SpCode6)
 head(lw)
 summary(lw$Bulk.LFM)
 
-p <- read.cBulk.LFMp <- read.csv('data/other_studies/Pivovaroff_WP_vs_LFM.csv',as.is=T)
+p <- read.cBulk.LFMp <- read.csv('data/other_studies/Pivovaroff_WP_vs_LFM.csv',as.is=T) %>% 
+  mutate(date = mdy(Date))
 names(p)
 p$SpCode6 <- spc$SpCode6[match(p$Species,spc$SoCal.spp)]
 table(p$Species,p$SpCode6)
@@ -18,7 +20,8 @@ head(p)
 p$lfm <- p$LFM_./100
 summary(p$lfm)
 
-m <- read.csv('data/other_studies/sierra_lfm_mpa.csv')
+m <- read.csv('data/other_studies/sierra_lfm_mpa.csv') %>% 
+  mutate(date = ymd(date))
 names(m)
 m$SpCode6 <- spc$SpCode6[match(m$Species,spc$SEKI.spp)]
 table(m$Species,m$SpCode6)
@@ -26,7 +29,8 @@ head(m)
 m$lfm <- m$lfm/100
 summary(m$lfm)
 
-s <- read.csv('data/other_studies/sedgwick_22_lfm_mpa_df20230724.csv')
+s <- read.csv('data/other_studies/sedgwick_22_lfm_mpa_df20230724.csv') %>% 
+  mutate(date = ymd(date_lfm))
 names(s)
 s$SpCode6 <- spc$SpCode6[match(s$species,spc$Sedgwick.spp)]
 table(s$species,s$SpCode6)
@@ -38,13 +42,15 @@ summary(s$mpa_mean)
 
 # subset to same columns and make names the same
 head(lw)
-lwx <- lw[,c('SpCode6','Sampling','Midday.mean','Bulk.LFM')]
+#lwx <- lw[,c('SpCode6','Sampling','Midday.mean','Bulk.LFM')]
+lwx <- lw[,c('SpCode6','date','Midday.mean','Bulk.LFM')]
 names(lwx) <- c('Species','date','mwp','lfm')
 lwx$study <- 'Pepperwood'
 head(lwx)
 
 names(p)
-px <- p[,c('SpCode6','Date','WP_md_MPa','lfm')]
+#px <- p[,c('SpCode6','Date','WP_md_MPa','lfm')]
+px <- p[,c('SpCode6','date','WP_md_MPa','lfm')]
 names(px) <- c('Species','date','mwp','lfm')
 px$study <- 'StuntRanch'
 names(px)
@@ -56,7 +62,8 @@ mx$study <- 'SEKI'
 head(mx)
 
 names(s)
-sx <- s[,c('SpCode6','date_lfm','mpa_mean','lfm')]
+#sx <- s[,c('SpCode6','date_lfm','mpa_mean','lfm')]
+sx <- s[,c('SpCode6','date','mpa_mean','lfm')]
 names(sx) <- c('Species','date','mwp','lfm')
 sx$study <- 'Sedgwick'
 head(sx)
@@ -81,4 +88,4 @@ table(lwa$study,lwa$date)
 summary(lwa$lfm)
 hist(lwa$lfm)
 
-write.csv(lwa,'data/all-data-combined.csv')
+write.csv(lwa,here('data', 'all-data-combined.csv'))
