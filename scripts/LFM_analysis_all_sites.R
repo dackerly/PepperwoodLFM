@@ -1,5 +1,5 @@
 ## preliminary analysis of 2021 LFM data
-rm(list=ls())
+#rm(list=ls())
 library(ggplot2)
 source('scripts/lfm_functions.R')
 
