@@ -56,8 +56,8 @@ px$study <- 'StuntRanch'
 names(px)
 
 names(m)
-mx <- m[,c('SpCode6','date','water_potential','lfm')]
-names(mx) <- c('Species','date','mwp','lfm')
+mx <- m[,c('SpCode6','date','water_potential','lfm','tissue_age')]
+names(mx) <- c('Species','date','mwp','lfm', 'tissue_age')
 mx$study <- 'SEKI'
 head(mx)
 
@@ -68,7 +68,7 @@ names(sx) <- c('Species','date','mwp','lfm')
 sx$study <- 'Sedgwick'
 head(sx)
 
-lwa <- rbind(lwx,px,mx,sx)
+lwa <- bind_rows(lwx,px,mx,sx)
 dim(lwa)
 head(lwa)
 
@@ -89,3 +89,4 @@ summary(lwa$lfm)
 hist(lwa$lfm)
 
 write.csv(lwa,here('data', 'all-data-combined.csv'))
+

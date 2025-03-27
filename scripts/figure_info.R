@@ -76,7 +76,7 @@ color_fill_site <- scale_fill_manual(values = c("#B9C7E2", "#ECAB99",  "#5B6530"
 
 
 #color <- scale_color_manual(values = cal_palette("sierra1"))
-color <- scale_color_manual(values = c("#B9C7E2", "#ECAB99",  "#5B6530", "#9484B1",  "#F1C100"))
+color <- scale_color_manual(values = c( "#ECAB99",  "#5B6530", "#9484B1",  "#F1C100"))
 
 color_line_size <- scale_color_manual(values = c("#004f63", "#62929a"
 ))
