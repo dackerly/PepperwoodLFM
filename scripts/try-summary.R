@@ -3,7 +3,6 @@ try <- read.csv(here('data', 'other_studies', 'try-trait-data.csv'))
 dim(try)
 str(try)
 
-
 tmn <- tapply(try$OrigValueStr,list(try$SpeciesName,try$OriglName),mean,na.rm=T)
 str(tmn)
 tmn
@@ -27,6 +26,64 @@ table(try$SpeciesName)
 table(try$OriglName)
 try$OrigValueStr[which(try$SpeciesName=='Quercus berberidifolia' & try$OriglName=='P50 (MPa)')]
 
+#------
+
+#This is the data we actually use, which is a combination of the following: 
+#1) David's trait data (here("data", "species-traits.csv)), not sure where it is made/written or written. Seems to be the data above? 
+# 2) I (Indra) added in SEKI data and looked online to find other traits, which are now in the "species-traits-withseki.csv". Compiled in Excell. 
+traits_df <- read_csv(here("data", "species-traits-withseki.csv")) %>% 
+  clean_names() %>% 
+  mutate(species = sp_code) %>% 
+ # filter(sla < 20) %>% 
+  mutate(psi_tlp = case_when(
+    psi_tlp %in% c(NA) & species %in% c("QUEDOU") ~ -2.568,
+    TRUE ~ as.numeric(psi_tlp)))
+
+SpCodes <- read_csv(here("data", "SpCodes.csv"))
+
+#Add rooting depth info from here:https://www.groundwaterresourcehub.org/where-we-work/california/plant-rooting-depth-database/
+rd_df <- read_csv(here("data", "other_studies", "Plant_Rooting_Depth_Database_20210525_update_sheet2.csv")) %>% 
+  clean_names() %>% 
+  select(scientific_name, max_rooting_depth_m) %>%
+  mutate(Genus_species = scientific_name) %>% 
+  merge(., SpCodes,  by = c("Genus_species")) %>% 
+  select(SpCode6, 3, 4) %>% 
+  mutate(min_or_max = case_when(
+    max_rooting_depth_m %in% c("> 2.45") ~ "min",
+    max_rooting_depth_m %in% c("> 2.74") ~ "min",
+    max_rooting_depth_m %in% c("> 1.52") ~ "min",
+    max_rooting_depth_m %in% c("> 1.22") ~ "min",
+    max_rooting_depth_m %in% c(">4") ~ "min",
+    max_rooting_depth_m %in% c("> 0.61") ~ "min",
+    TRUE ~ as.character("max")
+  )) %>% 
+  mutate(max_rooting_depth_m = case_when(
+    max_rooting_depth_m %in% c("> 2.45") ~ 2.45,
+    max_rooting_depth_m %in% c("> 2.74") ~ 2.74,
+    max_rooting_depth_m %in% c("> 1.52") ~ 1.52,
+    max_rooting_depth_m %in% c("> 1.22") ~ 1.22,
+    max_rooting_depth_m %in% c(">4") ~ 4,
+    max_rooting_depth_m %in% c("> 0.61") ~ 0.61,
+    TRUE ~ as.numeric(max_rooting_depth_m)
+  )) %>% 
+  rename(sp_code = SpCode6) %>% 
+  group_by(sp_code) %>% 
+  mutate(max_rooting_depth_m = max(max_rooting_depth_m, na.rm = T)) %>% 
+  mutate(max_rooting_depth_m = case_when(
+    max_rooting_depth_m %in% c(-Inf) ~ NA, 
+    TRUE ~ as.numeric(max_rooting_depth_m)
+  )) %>% 
+  select(-min_or_max) %>% 
+  distinct()
+  
+  unique(rd_df$max_rooting_depth_m)
+  
+  traits_rd_df <- merge(rd_df, traits_df, by = c("sp_code"), all.y = T) %>% 
+    select(-dr_max_rooting_depth) #old attempt to manually find rooting deptha
+                    
+write_csv(traits_rd_df, here("data", "traits_rd_20250327.csv"))
+
+#Older data, not sure this is used?
 ###-----------------
 # summarize try trait data for SEKI
 tmn_seki <- read.csv(here('data', 'try_seki_traits_1.csv')) %>% 
@@ -47,6 +104,7 @@ tsd_seki <- read.csv(here('data', 'try_seki_traits_1.csv')) %>%
 
 write.csv(tmn_seki,here('data', 'other_studies', 'try-means-seki.csv'))
 write.csv(tsd_seki,here('data', 'other_studies', 'try-cvs-seki.csv'))
+
 ###-----------------
 # summarize try trait data for SEKI, attempt 2
 tmn_seki <- read.csv(here('data', 'try_seki_traits_2.csv')) %>% 
@@ -73,7 +131,7 @@ try_all <- read.csv(here('data', 'try_all_20241014.csv')) %>%
   filter(OriglName %in% c("P50", "P88", "LDMC",  "Pmin predawn (Mpa)", "Pmin midday (Mpa)", 
                           "SLA (cm2 g-1)", "Water potential at 50% loss of conductivity Psi_50 (MPa)",
                           "P50 (MPa)", "P88 (MPa)", "SLA", "LMA (g/m2)"
-                          )) %>% 
+  )) %>% 
   mutate(trait_name = case_when(
     OriglName %in% c("P50", "Water potential at 50% loss of conductivity Psi_50 (MPa)", "P50 (MPa)") ~ "P50",
     OriglName %in% c("P88", "P88 (MPa)") ~ "P88",
@@ -82,7 +140,7 @@ try_all <- read.csv(here('data', 'try_all_20241014.csv')) %>%
   )) %>% 
   select(-OriglName) %>% 
   distinct()
-  
+
 tmn_all <- try_all %>% 
   #filter(SpeciesName %in% c("Ceanothus megacarpus")) %>% 
   group_by(SpeciesName, trait_name) %>% 
@@ -95,4 +153,19 @@ tsd_all <- try_all %>%
   mutate(tsd = sd(StdValue, na.rm = T)) %>% 
   select(-StdValue) %>% 
   distinct()
+
+
+tmn_all_wide <- tmn_all %>% 
+  pivot_wider(names_from = c(trait_name),
+              values_from = c(tmn))
+
+#-----
+
+unique(try$SpeciesName)
+unique(try_all$SpeciesName)
+
+unique(try$SpeciesName)
+unique(try_all$SpeciesName)
+
+#-----
 
