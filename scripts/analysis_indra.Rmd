@@ -1456,15 +1456,6 @@ fig5_df <- q3_df %>%
 #-----
 
 
-
-
-
-
-
-
-
-
-
 ##---------
 ```{r}
 ## Preliminary analysis of 2021 Live Fuel Moisture (LFM) data
