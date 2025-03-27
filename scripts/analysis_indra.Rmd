@@ -17,7 +17,11 @@ color_species =    scale_color_manual(values = c("#17154f", "#2f357c", "#6c5d9e"
                                  "#5b859e", "#1e395f", "#75884b", "#1e5a46", "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711"))
 ```
 
-#Read in data & look at it: 
+#Data wrangling: 
+
+#####Read in: 
+
+Description of datasets: 
 
 ```{r}
 df <- read_csv(here::here("data", "all-data-combined.csv")) %>% 
@@ -32,6 +36,7 @@ df <- read_csv(here::here("data", "all-data-combined.csv")) %>%
 
 ```
 
+#####Outliers? 
 
 ```{r}
 df %>% 
@@ -186,9 +191,84 @@ df1 <- df %>%
   filter(!(species %in% c("QUEAGR") & date %in% c("2022-04-27") & study %in% c("Sedgwick")))
 ```
 
-#####Figure 1: 
+####Table 1: (dataset summary)
 
+Table 1. Species names and characteristics and sample sizes across the four studies. Sites: PeW = Pepperwood, StR = Stunt Ranch (Pivovaroff et al. 2019), SeR = Sedgwick Reserve, PrC = Providence Creek Watershed; Dec/Ever = deciduous/evergreen; Growth form = tree or shrub. Sample sizes indicate individual observations (LFM and MPa from a single individual on a single date).
 
+```{r}
+#devtools::install_github("ecoinfor/U.Taxonstand")
+#install.packages("U.Taxonstand")
+#library(Taxonstand)
+library(U.Taxonstand)  # If you're using U.Taxonstand instead
+
+SpCodes <- read_csv(here("data", "SpCodes.csv")) %>%
+  mutate(species = SpCode6) %>% 
+  mutate(family = familyMatch(splist = c(Genus), taxon = "plant")$family)
+
+traits_df <- read_csv(here("data", "species-traits-withseki.csv")) %>% 
+  clean_names() %>% 
+  mutate(species = sp_code) %>% 
+  select(species, functional_type, growth_form)
+
+sp_info <- merge(traits_df, SpCodes)
+
+table1_df <- merge(df1, sp_info, by = c("species")) %>% 
+  group_by(study, species, Genus_species, functional_type, growth_form, family) %>% 
+  summarise(n = n()) %>% 
+  pivot_wider(names_from = c(study), 
+              values_from = n) %>% 
+  mutate(dec_ever = case_when(
+    species %in% c("QUEDOU",
+                   "QUEGAR",
+                   "QUEKEL",
+                   "SALLEU",
+                   "SALMEL") ~ "Dec",
+    species %in% c("ERIFAS") ~ "Semi-Dec",
+    TRUE ~ as.character("Ever")
+  )) %>% 
+  mutate(growth_form = case_when(
+    species %in% c("CERBET") ~ "tree/shrub",
+    TRUE ~ as.character(growth_form)
+  )) %>% 
+  mutate(common_name = case_when(
+    species %in% c("ADEFAS") ~ "Chamise",
+    species %in% c("ARBMEN") ~ "Madrone",
+    species %in% c("CEACUN") ~ "Bickbush",
+    species %in% c("CEAPAR") ~ "Parry ceanothus",
+    species %in% c("HETARB") ~ "Toyon",
+    species %in% c("PSEMEN") ~ "Douglas-fir",
+    species %in% c("QUEAGR") ~ "Live oak",
+    species %in% c("QUEDOU") ~ "Blue oak",
+    species %in% c("QUEDUR") ~ "Leather oak",
+    species %in% c("QUEGAR") ~ "Oregon white oak",
+    species %in% c("QUEKEL") ~ "California black oak",
+    species %in% c("UMBCAL") ~ "California bay",
+    species %in% c("ARCPAT") ~ "Greenleaf manzanita",
+    species %in% c("CEACOR") ~ "Whitethorn ceanothus",
+    species %in% c("ARCGLA") ~ "Eastwood manzanita",
+    species %in% c("CEASPI") ~ "Greenbark ceanothus",
+    species %in% c("CERBET") ~ "Mountain mahogany",
+    species %in% c("ERIFAS") ~ "California buckwheat",
+    species %in% c("MALLAU") ~ "Laurel sumac",
+    species %in% c("QUEBER") ~ "Scrub oak",
+    species %in% c("SALLEU") ~ "Purple sage",
+    species %in% c("SALMEL") ~ "Black sage")) %>% 
+  ungroup() %>% 
+  dplyr::select(species, Genus_species, common_name, family, growth_form, dec_ever, Pepperwood, SEKI, Sedgwick, StuntRanch) %>% 
+  rename(PeW = Pepperwood, 
+         PrC = SEKI, 
+         StR = StuntRanch, 
+         SeR = Sedgwick) %>% 
+  arrange(species, Genus_species, common_name, family, growth_form, dec_ever, PeW, PrC, StR, SeR) %>%
+  adorn_totals("row")
+
+# table1_df  %>% 
+#   kable(format = "pipe")
+
+write_csv(table1_df, here("results", "figures", "table1.csv"))
+```
+
+####Figure 1: (datasets)
 
 ```{r}
 df1 %>% 
@@ -278,6 +358,106 @@ points(rep(-6.7, length(sites)), seq(2.84, 2.64 - 0.2 * (length(sites) - 1), len
        pch = c(19, 5, 15, 17), col = scolors, cex = 2)  # Added SEKI symbol
 ```
 
+#Conceptual Model:
+
+
+#####Figure 2: 
+```{r}
+## conceptual model
+source(here("scripts", "lfm_functions.R"))
+spres <- read.csv(here("results", "species-results.csv"))
+head(spres)
+slp <- -0.198
+
+# conceptual figure, in inverted space - need to flip to LFM# conceptual figulettersre, in inverted space - need to flip to LFM
+lfm.sat <- c(0.9,0.5)
+slp <- -0.2
+min.MWP <- c(-6,-3)
+
+xy <- inversePlotData(c(min.MWP[1],0),c(lfm.sat[1],slp))
+head(xy)
+plot(xy$MWP,xy$LFM)
+
+(MWPcrit <- solveForX(c(lfm.sat[2],slp),1/0.7))
+
+(max.iLFM <- lfm.sat + min.MWP*slp)
+(min.LFM <- 1/max.iLFM)
+
+op=par(mfrow=c(1,2))
+plot(c(-7,0),c(0,3),type='n',xlab='MWP',ylab='1/LFM')
+x <- list()
+y <- list()
+for (i in 1:2) {
+  x[[i]] <- c(0,min.MWP[i])
+  y[[i]] <- c(lfm.sat[i],max.iLFM[i])
+  lines(x[[i]],y[[i]],type='b',cex=2,pch=c(1,19))
+}
+
+xy1 <- inversePlotData(c(0,min.MWP[1]),c(lfm.sat[1],slp))
+xy2 <- inversePlotData(c(0,min.MWP[2]),c(lfm.sat[2],slp))
+plot(c(-7,0),c(0,3),type='n',xlab='MWP',ylab='LFM')
+lines(xy1$MWP,xy1$LFM,type='l')
+head(xy1)
+points(xy1[c(1,100),c('MWP','LFM')],cex=2,pch=c(1,19))
+lines(xy2$MWP,xy2$LFM,type='l')
+points(xy2[c(1,100),c('MWP','LFM')],cex=2,pch=c(1,19))
+par(op)
+```
+Trying to do it in ggplot, need to come back to this. maybe the above is fine. 
+```{r, eval = F}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(patchwork) # For side-by-side plotting
+
+# Define slope and LFM saturation values
+slp <- -0.2
+lfm.sat <- c(0.9, 0.5)
+min.MWP <- c(-6, -3)
+
+# Compute inverse plot data
+xy1 <- inversePlotData(c(0, min.MWP[1]), c(lfm.sat[1], slp))
+xy2 <- inversePlotData(c(0, min.MWP[2]), c(lfm.sat[2], slp))
+
+# Convert to data frames
+df1 <- data.frame(MWP = xy1$MWP, LFM = xy1$LFM, Group = "Set 1")
+df2 <- data.frame(MWP = xy2$MWP, LFM = xy2$LFM, Group = "Set 2")
+df_inverted <- bind_rows(df1, df2)
+
+# Compute non-inverted plot data
+max.iLFM <- lfm.sat + min.MWP * slp
+min.LFM <- 1 / max.iLFM
+
+df_non_inverted <- tibble(
+  MWP = c(0, min.MWP[1], 0, min.MWP[2]),
+  LFM = c(lfm.sat[1], min.LFM[1], lfm.sat[2], min.LFM[2]),
+  Group = c("Set 1", "Set 2", "Set 2","Set 1")
+)
+
+# Inverted plot (MWP vs LFM)
+p1 <- ggplot(df_inverted, aes(x = MWP, y = LFM, color = Group)) +
+  geom_line(size = 1) +
+  geom_point(data = df_inverted %>% filter(MWP %in% c(0, min.MWP)), 
+             aes(x = MWP, y = LFM), size = 4, shape = c(1, 19, 1, 19)) +
+  labs(x = "MWP", y = "LFM", title = "Inverted Space") +
+  theme_minimal() +
+  ylim(0, 3)+
+  xlim(-7, 0)
+
+# Non-inverted plot (1/LFM vs MWP)
+p2 <- ggplot(df_non_inverted, aes(x = MWP, y = 1/LFM, color = Group)) +
+  geom_line(size = 1) +
+  geom_point(size = 4, shape = c(1, 19, 1, 19)) +
+  labs(x = "MWP", y = "1/LFM", title = "Non-Inverted Space") +
+  theme_minimal() +
+  ylim(0, 3) +
+  xlim(-7, 0)
+
+# Combine the two plots side by side
+p1 + p2
+
+```
+
 #Q1: 
 Intro/discussion:
 1) What are the aggregate and species-level relationships between leaf water potential and live fuel moisture, and how do they compare across studies? We predict that initial LFM and minimum WP will explain variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2), and that these will be largely consistent across species.  
@@ -347,15 +527,15 @@ fit_glm_extract <- function(df, group_var) {
 }
 
 # Apply function for species
-coef_species <- fit_glm_extract(df, "species") %>% 
+coef_species <- fit_glm_extract(df1, "species") %>% 
   mutate(group = "species")
 
 # Apply function for sp_site
-coef_sp_site <- fit_glm_extract(df, "sp_site") %>% 
+coef_sp_site <- fit_glm_extract(df1, "sp_site") %>% 
   mutate(group = "sp_site")
 
 # Apply function for sp_site
-coef_sp_study <- fit_glm_extract(df, "study") %>% 
+coef_sp_study <- fit_glm_extract(df1, "study") %>% 
   mutate(group = "study")
 
 fit_glm_extract_grand <- function(df, group_var) {
@@ -377,7 +557,7 @@ fit_glm_extract_grand <- function(df, group_var) {
     select(all_of(group_var), intercept, slope)  # Keep only relevant columns
 }
 
-coef_sp_grand <- fit_glm_extract_grand(df, "species") %>% 
+coef_sp_grand <- fit_glm_extract_grand(df1, "species") %>% 
   mutate(group = "grand_species")
 
 
@@ -393,20 +573,21 @@ coef_compare_df %>%
   ggplot(aes(y = slope, 
              x = intercept,
              color = group)) +
-  geom_jitter(alpha = .4)
+  geom_point(alpha = .4)
 
 ```
 
 
 ```{r, predict}
 # Predict water potential (mwp) for each sp_site
-df_pred <- df %>%
-  left_join(coef_species, by = "species") %>%  # Merge coefficients
+df_pred <- df1 %>%
+  left_join(coef_species, by = "species") %>%  # Merge coefficients, using separate slope and intercept per species
   mutate(
     mwp_pred = (ilfm - intercept) / slope,  # Solve for mwp using linear equation
-    lfm_pred = 1 / ilfm  # Transform ilfm back to lfm
-  )
-
+   # lfm_pred = 1 / ilfm,  # Transform ilfm back to lfm
+    lfm_pred = 1/(slope * mwp + intercept)  # Transform ilfm back to lfm
+  ) 
+  
 # Plot predicted vs original lfm
 ggplot(df_pred, aes(x = mwp, y = mwp_pred, color = sp_site)) +
   geom_point(alpha = 0.5) +
@@ -420,6 +601,39 @@ ggplot(df_pred, aes(x = mwp, y = mwp_pred, color = sp_site)) +
 
 # Plot predicted vs original lfm
 ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = sp_site)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +  # 1:1 reference line
+  labs(
+    x = "Original LFM",
+    y = "Predicted LFM",
+    title = "Predicted vs Original LFM"
+  ) +
+  theme_minimal()
+
+#-----------
+# Predict water potential (mwp) for each sp_site
+df_pred <- df1 %>%
+  left_join(coef_sp_grand, by = "species") %>%  # Merge coefficients, using separate slope and intercept per species
+  mutate(
+    mwp_pred = (ilfm - intercept) / slope,  # Solve for mwp using linear equation
+   # lfm_pred = 1 / ilfm,  # Transform ilfm back to lfm
+    lfm_pred = 1/(slope * mwp + intercept)  # Transform ilfm back to lfm
+  ) 
+  
+# Plot predicted vs original lfm
+ggplot(df_pred, aes(x = mwp, y = mwp_pred, color = species, label = species)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +  # 1:1 reference line
+  labs(
+    x = "Original Water Potential",
+    y = "Predicted Water Potential",
+    title = "Predicted vs Original Water Potential"
+  ) +
+  theme_minimal()
+
+# Plot predicted vs original lfm
+ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = species,
+                    label = species)) +
   geom_point(alpha = 0.5) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +  # 1:1 reference line
   labs(
@@ -443,7 +657,7 @@ concept_both_df <- bind_rows(concept_df %>% mutate(slope_type = "grand"),
                              concept_slopes_df %>% mutate(slope_type = "species"))
 ```
 
-#####Figure 3.
+#####Figure 3. (models)
 
 ```{r, figure1}
 # Generate model-predicted lines for each species
@@ -748,7 +962,7 @@ fig4h <- concept_params_df %>%
 fig4h
 
 ```
-####Figure 4.
+####Figure 4. (isocline)
 
 Using common slope for all species: 
 
@@ -1232,7 +1446,25 @@ for (plot in plots) print(plot)
 #Doesnt make a difference. 
 ```
 
-####Figure 5. 
+####Figure 5. (traits)
+
+```{r}
+fig5_df <- q3_df %>% 
+  
+```
+
+#-----
+
+
+
+
+
+
+
+
+
+
+
 ##---------
 ```{r}
 ## Preliminary analysis of 2021 Live Fuel Moisture (LFM) data
