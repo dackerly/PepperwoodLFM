@@ -15,9 +15,9 @@ HETARB,-6.32,-2.7,0.52475,4.991392563,1.98,0.905669366,,angiosperm,shrub,,,
 MALLAU,-1.65,-2.07,0.2989,4.825,12.2,,,angiosperm,shrub,86.19792379,,
 PINJEF,-3.11,-2.3,0.5332,3.89481541,3.75,,,gymnosperm,tree,,,
 PSEMEN,-3.786,-2.79,0.519,6.351748677,1.3084,0.932869445,,gymnosperm,tree,,"Condo and Reinhardt, 2019",P50
-QUEAGR,-4.32,-2.61,0.55475,6.097817065,7.02,0.80261379,9.89,angiosperm,tree,,,
+QUEAGR,-4.32,-2.58,0.55475,6.097817065,7.02,0.80261379,9.89,angiosperm,tree,,"Chacon et al, 2020",TLP
 QUEBER,-5.64,-1.97,0.2198,5.675302781,,,,angiosperm,tree,,,
-QUEDOU,-4.48,-2.568,0.508,7.628852866,2.82,0.5075,0.97044335,angiosperm,tree,,"Boving et al., ",TLP
+QUEDOU,-4.48,-3.4,0.508,7.628852866,2.82,0.5075,0.97044335,angiosperm,tree,,"Allen et al, in prep.",TLP
 QUEDUR,-4.29,-3.33,0.438,5.626687124,,1.285191956,,angiosperm,tree,,,
 QUEGAR,-3.38,-3.61,,7.96276,,,,angiosperm,tree,73.51980796,"John et al, 2018; Hahm et al., ","RWC, TLP"
 QUEKEL,-3.86,-2.86,,9.397140815,12.07,,,angiosperm,tree,,,

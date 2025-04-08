@@ -68,28 +68,6 @@ df %>%
         legend.position.inside = c(0.1, 0.8)) +
   facet_wrap(~species, scales = "free")
 ```
-
-Linear relationship between iLFM and middays: 
-
-```{r}
-#model with untransformed LFM: 
-mod <- glm(mwp ~ lfm, data = df)
-mod
-summary(mod)
-plot(mod)
-
-#model with transformed LFM: 
-mod_inv <- glm(mwp ~ ilfm, data = df)
-mod_inv
-summary(mod_inv)
-plot(mod_inv)
-#resid(mod_inv)
-
-AIC(mod_inv)
-AIC(mod)
-#inverse LFM also has the better AIC
-```
-
 model and look for outliers for each site:
 
 ```{r}
@@ -189,7 +167,15 @@ AIC(mod)
 Remove outliers, now this is the dataset we want to use: 
 ```{r}
 df1 <- df %>% 
-  filter(!(species %in% c("QUEAGR") & date %in% c("2022-04-27") & study %in% c("Sedgwick")))
+  filter(!(species %in% c("QUEAGR") & date %in% c("2022-04-27") & study %in% c("Sedgwick"))) %>% 
+  mutate(study_nice = case_when(
+    study %in% c("Pepperwood") ~ "PwD",
+    study %in% c("Sedgwick") ~ "SeR",
+    study %in% c("SEKI") ~ "PrC",
+    study %in% c("StuntRanch") ~ "StR"
+  ))
+
+unique(df1$study)
 ```
 
 ####Table 1: (dataset summary)
@@ -272,7 +258,7 @@ write_csv(table1_df, here("results", "figures", "table1.csv"))
 ####Figure 1: (datasets)
 
 ```{r}
-df1 %>% 
+fig1 <- df1 %>% 
   ggplot(aes(y = lfm*100, x = mwp, color = species)) + 
   geom_hline(yintercept = 60, linetype = "dotted") +
     geom_point(alpha = .5) +
@@ -284,7 +270,10 @@ df1 %>%
   color_species + 
   theme(legend.position = "right", 
         legend.position.inside = c(0.1, 0.8)) +
-  facet_wrap(~study, nrow = 2)
+  facet_wrap(~study_nice, nrow = 2)
+fig1
+
+ggsave(plot = fig1, here::here("figures", "fig1.jpg"), dpi = 600, height = 4, width = 6, units = "in")
 ```
 
 ```{r}
@@ -471,12 +460,57 @@ While less parsimoneous, we also investigated variation across species slopes to
 Results: 
 The common slope across species was -0.179, while the individual species slopes ranged from -0.278 to -0.064. Using a model with a common slope resulted a model fit with R2 = 0.660, while the model with separate slopes per species had R2 = 0.683. 
 
+#####Figure SX. (linear fits)
+Linear relationship between iLFM and middays: 
+
+```{r}
+# Model with untransformed LFM
+mod <- glm(mwp ~ lfm, data = df1)
+mod_summary <- summary(mod)
+
+# Model with transformed LFM (inverse LFM)
+mod_inv <- glm(mwp ~ ilfm, data = df1)
+mod_inv_summary <- summary(mod_inv)
+
+# Compare AIC and BIC
+aic_values <- c(AIC(mod), AIC(mod_inv))
+bic_values <- c(BIC(mod), BIC(mod_inv))
+model_names <- c("Untransformed LFM", "Transformed LFM (iLFM)")
+
+# Compute Pseudo R-squared (McFadden's R²)
+pseudo_r2 <- function(model) {
+  1 - (model$deviance / model$null.deviance)
+}
+
+r2_values <- c(pseudo_r2(mod), pseudo_r2(mod_inv))
+
+# Compare residuals
+par(mfrow = c(2, 2))  # Set plotting layout for residual diagnostics
+plot(mod, main = "Untransformed LFM Model")
+plot(mod_inv, main = "Transformed LFM Model")
+
+# Create a summary table for comparison
+model_comparison <- data.frame(
+  Model = model_names,
+  AIC = aic_values,
+  BIC = bic_values,
+  Pseudo_R2 = r2_values
+)
+
+print(model_comparison)
+
+# Determine the better model based on AIC
+best_model <- ifelse(AIC(mod_inv) < AIC(mod), "Transformed LFM (iLFM)", "Untransformed LFM")
+cat("Best model based on AIC:", best_model, "\n")
+```
+
+
+#####Table SX (coefs)
 ```{r, models}
 library(lme4)
 
 mod_spp_int <- glm(ilfm ~ mwp*species, data = df1)
 #mod_spp_int_lmer <- lmer(ilfm ~ mwp*species + species|study, data = df1, REML = T)
-
 mod_spp_noint <- glm(ilfm ~ mwp + species, data = df1)
 #mod_spp_lmer <- lmer(ilfm ~ mwp + species + 1|study, data = df1)
 
@@ -507,6 +541,28 @@ coef(summary(mod_spp_int))
 summary(mod_spp_int)
 
 summary(mod_spp_noint)
+
+tablesx_coefs <- broom::tidy(mod_spp_noint) %>% 
+    dplyr::mutate(across(where(is.numeric), round, 4)) %>% 
+  mutate(p.value.stars = case_when(
+    p.value < 0.001 ~ "***",
+    p.value < 0.01 & p.value < 0.001 ~ "**",
+    p.value < 0.05 & p.value > 0.01 ~ "*", 
+    TRUE ~ as.character(" ")
+  ))
+
+write_csv(tablesx_coefs, here("results", "figures", "tableSX_coefs.csv"))
+
+tablesx_ints_coefs <- broom::tidy(mod_spp_int) %>% 
+    dplyr::mutate(across(where(is.numeric), round, 4)) %>% 
+  mutate(p.value.stars = case_when(
+    p.value < 0.001 ~ "***",
+    p.value < 0.01 & p.value < 0.001 ~ "**",
+    p.value < 0.05 & p.value > 0.01 ~ "*", 
+    TRUE ~ as.character(" ")
+  ))
+
+write_csv(tablesx_coefs, here("results", "figures", "tableSX_ints_coefs.csv"))
 ```
 
 
@@ -531,14 +587,49 @@ fit_glm_extract <- function(df, group_var) {
 coef_species <- fit_glm_extract(df1, "species") %>% 
   mutate(group = "species")
 
+# Apply function for study
+coef_study <- fit_glm_extract(df1, "study") %>% 
+  mutate(group = "study")
+```
+
+#####Figure SX (differencest across studies)
+```{r, slopes}
 # Apply function for sp_site
 coef_sp_site <- fit_glm_extract(df1, "sp_site") %>% 
-  mutate(group = "sp_site")
+  mutate(group = "sp_site")%>% 
+  separate_wider_delim(sp_site, names = c("species", "study"), "_") 
 
-# Apply function for sp_site
-coef_sp_study <- fit_glm_extract(df1, "study") %>% 
-  mutate(group = "study")
+coef_sp_site_dupes <- coef_sp_site %>% 
+  group_by(species) %>% 
+  filter(n() >= 2)
 
+coef_sp_site %>% 
+  ggplot() +
+  geom_point(aes(y = intercept, x = slope, shape = study), data = coef_sp_site, color = "black") +
+  geom_point(aes(y = intercept, x = slope, color = species), data = coef_sp_site_dupes, shape = c(1), size = 10)+
+  geom_smooth(method = "lm", se = F, aes(y = intercept, x = slope, color = species), data = coef_sp_site_dupes)
+
+spp_dupes <- list(unique(coef_sp_site_dupes$species))
+spp_dupes
+
+df2 <- df %>% 
+  filter(species %in% c("ADEFAS", "HETARB", "QUEAGR", "QUEDOU", "QUEKEL"))
+
+mod1 <- glm(ilfm ~ mwp*species + study, data = df2, family = gaussian)
+mod2 <- glm(ilfm ~ mwp*species, data = df2, family = gaussian)
+
+anova(mod1, mod2)
+AIC(mod1, mod2)
+
+car::vif(mod1)
+summary(mod1)
+
+car::vif(mod2)
+summary(mod2)
+```
+
+
+```{r, slopes}
 fit_glm_extract_grand <- function(df, group_var) {
   # Fit a single slope model using all data
   common_slope_model <- glm(ilfm ~ mwp, data = df, family = gaussian)
@@ -564,7 +655,7 @@ coef_sp_grand <- fit_glm_extract_grand(df1, "species") %>%
 
 coef_compare_df <- bind_rows(coef_species, 
                              coef_sp_site,
-                             coef_sp_study,
+                             #coef_sp_study,
                              coef_sp_grand)
 
 range(coef_species$slope)
@@ -659,6 +750,93 @@ concept_both_df <- bind_rows(concept_df %>% mutate(slope_type = "grand"),
 ```
 
 #####Figure 3. (models)
+```{r, fig.height=5, fig.width=7}
+
+color_species <- scale_color_manual(values = c(
+  "ADEFAS" = "#17154f", "ARBMEN" = "#2f357c", "ARCGLA" = "#6c5d9e", "ARCPAT" = "#9d9cd5", 
+  "CEACOR" = "#b0799a", "CEACUN" = "#f6b3b0", "CEAPAR" = "#e48171", "CEASPI" = "#bf3729", 
+  "CERBET" = "#e69b00", "ERIFAS" = "#f5bb50", "HETARB" = "#ada43b", "MALLAU" = "#355828", 
+  "PSEMEN" = "#5b859e", "QUEAGR" = "#1e395f", "QUEBER" = "#75884b", "QUEDOU" = "#1e5a46", 
+  "QUEDUR" = "#df8d71", "QUEGAR" = "#af4f2f", "QUEKEL" = "#d48f90", "SALLEU" = "#732f30", 
+  "SALMEL" = "#ab84a5", "UMBCAL" = "#59385c"
+))
+
+# Define color palette for sites (color-blind friendly)
+color_manual <- scale_color_manual(values  = c(
+  "Pepperwood" = "#009E73",  # Green
+  "StuntRanch" = "#E69F00",  # Orange
+  "SEKI"       = "#56B4E9",  # Blue
+  "Sedgwick"   = "#D55E00"))   # Red
+
+# Identify the least negative (maximum) observed mwp per species
+species_thresholds <- concept_df %>%
+  filter(group == "grand_species") %>%
+  group_by(species) %>%
+  summarise(min_mwp = max(mwp, na.rm = TRUE), .groups = "drop")
+
+# Generate model-predicted lines for each species and study
+model_lines <- concept_df %>%
+  filter(group == "grand_species") %>% 
+  distinct(species, study, intercept, slope) %>%  
+  group_by(species, study) %>%
+  tidyr::expand_grid(mwp = seq(min(concept_df$mwp, na.rm = TRUE), max(concept_df$mwp, na.rm = TRUE), length.out = 100)) %>%
+  left_join(species_thresholds, by = "species") %>%  
+  mutate(
+    ilfm_pred = intercept + slope * mwp,  
+    line_type = ifelse(mwp > min_mwp, "dashed", "solid")  
+  ) %>%
+  ungroup()
+
+# Separate data for solid and dashed lines
+model_lines_solid <- model_lines %>% filter(line_type == "solid")
+model_lines_dashed <- model_lines %>% filter(line_type == "dashed")
+
+# Scatter plot of ilfm vs mwp with model lines
+fig3a <- ggplot(concept_df %>%
+  filter(group == "grand_species"), aes(x = -1 * mwp, y = ilfm)) +
+  geom_point(aes(color = species), alpha = 0.3, color = "black") +  
+  geom_line(data = model_lines_solid, aes(x = -1 * mwp, y = ilfm_pred, color = study, group = interaction(species, study)), size = 0.5) +  
+  geom_line(data = model_lines_dashed, aes(x = -1 * mwp, y = ilfm_pred, color = study, group = interaction(species, study)), size = 0.5, linetype = "dashed") +  
+  labs(
+    x = "Water Potential (MWP)",
+    y = "iLFM",
+    color = "Study"
+  ) +
+  color_manual +
+  theme(legend.position = "none")
+
+# Scatter plot of lfm vs mwp with model lines
+fig3b <- ggplot(concept_df %>%
+  filter(group == "grand_species"), aes(x = -1 * mwp, y = lfm)) +
+  geom_point(aes(color = species), alpha = 0.3, color = "black") +  
+  geom_line(data = model_lines_solid, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = interaction(species, study)), size = 0.5) +  
+  geom_line(data = model_lines_dashed, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = interaction(species, study)), size = 0.5, linetype = "dashed") +  
+  labs(
+    x = "Water Potential (MPa)",
+    y = "LFM",
+    color = "Study"
+  ) +
+  color_manual +
+  theme(legend.position = "none")
+
+# Extract legend
+legend <- cowplot::get_legend(
+  ggplot(concept_df %>%
+    filter(group == "grand_species"), aes(x = -1 * mwp, y = lfm)) +
+    geom_line(data = model_lines_solid, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = interaction(species, study)), size = 0.5) +
+    geom_line(data = model_lines_dashed, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = interaction(species, study)), size = 0.5, linetype = "dashed") +
+    labs(color = "Study") +
+    color_manual
+)
+
+# Combine plots
+fig3.1 <- cowplot::plot_grid(fig3a, fig3b, nrow = 2)
+fig3 <- cowplot::plot_grid(fig3.1, legend, nrow = 1, rel_widths = c(1, 0.25))
+fig3
+
+ggsave(plot = fig3, here::here("figures", "fig3.jpg"), dpi = 600, height = 4, width = 6, units = "in")
+```
+
 
 ```{r, figure1}
 # Generate model-predicted lines for each species
@@ -782,76 +960,35 @@ concept_params_df <- concept_both_df %>%
          maxlfm_minwp = -1*minwp + maxlfm
          ) 
 
+#species vs. grand intercepts: 
+concept_df_wide <- concept_params_df %>% 
+  rename(spp_code = species) %>% 
+  select(spp_code, group, intercept) %>% 
+  distinct() %>%  # Ensure unique rows
+  pivot_wider(names_from = group, values_from = intercept, names_repair = "unique")
+
+concept_df_wide %>% 
+ggplot(aes(x = grand_species, y = species, color = spp_code)) +
+  geom_abline() +
+  geom_point()
+
 
 df <- concept_params_df %>% filter(group == "species")
 
 q2mod <- lmer(minlfm ~ maxlfm + minwp + (1|species) + (1|study), data = df)
 q2mod
 summary(q2mod)
+
+head(concept_params_df)
 ```
 
-```{r, eval = F}
-library(MuMIn)
-#alternative method with random effects
-
-mvar <- lmer(minlfm ~ (1|minwp) + (1|species) + (1|study), data = df)
-
-plot(mvar)
-
-r2m <- r.squaredGLMM(mvar)[1] # plust the marginal R2 of fixed effects, if using
-#r2m 
-r2m
-
-var(df$minlfm, na.rm=T) # 1.18
-VarCorr(mvar)
-
-vest <- data.frame(VarCorr(mvar))
-#sum(vest$vcov) + 0.09 #1.001
-print(VarCorr(mvar), comp=c("Variance"))
-
-wc_all_vest_df <- vest %>% 
-  add_row(vcov = r2m, 
-          grp = "marginal_r2") %>% 
-  mutate(dataset= "All Dates")
-
-#wc_all_vest_df
-r2m
-sum(wc_all_vest_df$vcov)
-
-vdc2 <- wc_all_vest_df %>% 
-  mutate(total = sum(vcov)) %>% 
-  ungroup() %>% 
-  mutate(percent_var = vcov/total) %>% 
-  mutate(grp_new = grp)
-
-vdc2_plot <- vdc2 %>% 
-  ggplot(aes(x = dataset, 
-                    y = percent_var,
-                    fill = grp_new)) +
-  geom_col(stat = "identity") +
-  #color_fill_vdc +
-  labs(y = "", 
-       x = "", 
-       fill = "Variable") +
-  theme(
-    legend.position = "top",
-  strip.background = element_blank(),
- # strip.text.y = element_blank(), 
-  axis.text.x = element_text(size = 12), 
-   axis.text.y = element_text(size = 12), 
- # axis.text.y = element_blank(), 
-  #axis.ticks.y = element_blank(), 
-  axis.title = element_blank(),
- # legend.title = element_text(size = 14), 
-  legend.title = element_blank(), 
- legend.text= element_text(size = 12), 
-  ) +
-    scale_x_discrete(limits=rev)
-vdc2_plot
-```
 
 ```{r}
-fig4a <- concept_params_df %>% 
+params_test_df <- concept_params_df %>% 
+  select(species, intercept, intercept_lfm, slope, minlfm, minwp, minilfm, group, maxlfm, maxwp) %>% 
+  unique()
+
+fig4a <- params_test_df %>% 
   filter(group == "species") %>% 
   ggplot(aes(y = intercept_lfm, 
              x = minlfm, 
@@ -859,24 +996,25 @@ fig4a <- concept_params_df %>%
   geom_point(aes( color = species)) +
   geom_smooth(method = "lm", se  = F) +
   color_species +
-  stat_poly_eq() 
+  stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
+  stat_poly_line()
 fig4a
 #initial LFM does not well explain end of season LFM
 
-fig4b <- concept_params_df %>% 
+fig4b <- params_test_df %>% 
   filter(group == "species") %>% 
   ggplot(aes(y = intercept, 
              x = minlfm, 
             )) +
   geom_point(aes( color = species)) +
   geom_smooth(method = "lm", se  = F) +
-  color_species +
-  stat_poly_eq()
+   stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
+  stat_poly_line()
 fig4b
 #Initial 1/lfm does seem to kinda explain how low water potentials eventually go... 
 
 
-fig4c <- concept_params_df %>% 
+fig4c <- params_test_df %>% 
   filter(group == "species") %>% 
   ggplot(aes(y = intercept, 
              x = minwp, 
@@ -884,36 +1022,36 @@ fig4c <- concept_params_df %>%
   geom_abline()+
   geom_point(aes(color = species)) +
   geom_smooth(method = "lm", se  = F, color = "black") +
-  color_species +
-  stat_poly_eq() 
+  stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
+  stat_poly_line()
 fig4c
 #Intercept is related to but not totally teh same as the intercept
 
 
-fig4d <- concept_params_df %>% 
+fig4d <- params_test_df %>% 
   filter(group == "species") %>% 
   ggplot(aes(y = minwp, 
              x = maxlfm, 
             )) +
   geom_point(aes( color = species)) +
   geom_smooth(method = "lm", se  = F) +
-  color_species +
-  stat_poly_eq()
+stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
+  stat_poly_line()
 fig4d
 
-fig4e <- concept_params_df %>% 
+fig4e <- params_test_df %>% 
   filter(group == "species") %>% 
   ggplot(aes(y = maxwp, 
              x = minlfm, 
             )) +
   geom_point(aes( color = species)) +
   geom_smooth(method = "lm", se  = F) +
-  color_species +
-  stat_poly_eq()
+stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
+  stat_poly_line()
 fig4e
 #Intercept is related to but not totally teh same as the intercept
 
-fig4f <- concept_params_df %>% 
+fig4f <- params_test_df %>% 
   filter(group == "species") %>% 
   ggplot(aes(y = minwp, 
              x = minlfm, 
@@ -921,11 +1059,11 @@ fig4f <- concept_params_df %>%
   geom_point(aes( color = species)) +
  # geom_smooth(method = "lm", se  = F) +
   color_species +
-  stat_poly_eq() +
+stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
   stat_poly_line()
 fig4f
 
-fig4g <- concept_params_df %>% 
+fig4g <- params_test_df %>% 
   filter(group == "species") %>% 
   ggplot(aes(y = slope, 
              x = minlfm, 
@@ -933,12 +1071,12 @@ fig4g <- concept_params_df %>%
   geom_point(aes( color = species)) +
  # geom_smooth(method = "lm", se  = F) +
   color_species +
-  stat_poly_eq() +
+stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
   stat_poly_line()
 fig4g
 
 
-fig4g <- concept_params_df %>% 
+fig4g <- params_test_df %>% 
   filter(group == "species") %>% 
   ggplot(aes(y = slope, 
              x = maxlfm, 
@@ -946,23 +1084,124 @@ fig4g <- concept_params_df %>%
   geom_point(aes( color = species)) +
  # geom_smooth(method = "lm", se  = F) +
   color_species +
-  stat_poly_eq() +
+stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
   stat_poly_line()
 fig4g
 
-fig4h <- concept_params_df %>% 
-  filter(group == "species") %>% 
-  ggplot(aes(y = maxlfm_minwp, 
-             x = minlfm, 
-            )) +
-  geom_point(aes( color = species)) +
- # geom_smooth(method = "lm", se  = F) +
-  color_species +
-  stat_poly_eq() +
-  stat_poly_line()
-fig4h
+# fig4h <- params_test_df %>% 
+#   filter(group == "species") %>% 
+#   ggplot(aes(y = maxlfm_minwp, 
+#              x = minlfm, 
+#             )) +
+#   geom_point(aes( color = species)) +
+#  # geom_smooth(method = "lm", se  = F) +
+#   color_species +
+#   stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
+#   stat_poly_line()
+# fig4h
 
 ```
+#### Figure 4a (param correlations):
+```{r}
+color_species <- scale_color_manual(values = c(
+  "#17154f", "#2f357c", "#6c5d9e", "#9d9cd5", "#b0799a", "#f6b3b0", "#e48171", "#bf3729",
+  "#e69b00", "#f5bb50", "#ada43b", "#355828", "#5b859e", "#1e395f", "#75884b", "#1e5a46",
+  "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711"
+))
+
+make_lm_plot <- function(df, xvar, yvar, xlab, ylab, eq_x = NULL, eq_y = NULL, eq_col = "black") {
+  model <- lm(reformulate(xvar, yvar), data = df)
+  eqn <- paste0(
+    "y = ", round(coef(model)[2], 3), "x + ", round(coef(model)[1], 3),
+    "\nR² = ", round(summary(model)$r.squared, 3),
+    "\np = ", signif(summary(model)$coefficients[2, 4], 3)
+  )
+  
+  # Default to upper left corner unless overridden
+  if (is.null(eq_x)) eq_x <- min(df[[xvar]], na.rm = TRUE)
+  if (is.null(eq_y)) eq_y <- max(df[[yvar]], na.rm = TRUE)
+
+  ggplot(df, aes_string(x = xvar, y = yvar, color = "species")) +
+    geom_point(size = 2) +
+    geom_smooth(method = "lm", se = FALSE, color = eq_col) +
+    annotate("text", x = eq_x, y = eq_y, label = eqn, hjust = 0, vjust = 1,
+             size = 3.5, color = eq_col, fontface = "italic") +
+    color_species +
+    labs(x = xlab, y = ylab, color = "Species") +
+   # theme_minimal(base_size = 12) +
+    theme(legend.position = "right")
+}
+
+df_plot <- params_test_df %>% filter(group == "species")
+
+fig4a <- make_lm_plot(df_plot, "minlfm", "intercept_lfm", "Minimum LFM (%)", "End-of-season Intercept LFM")
+fig4b <- make_lm_plot(df_plot, "minlfm", "intercept", "Minimum LFM (%)", "Model Intercept (1/LFM)")
+fig4c <- make_lm_plot(df_plot, "minwp", "intercept", "Minimum WP (MPa)", "Model Intercept (1/LFM)")
+fig4d <- make_lm_plot(df_plot, "maxlfm", "minwp", "Maximum LFM (%)", "Minimum WP (MPa)")
+fig4e <- make_lm_plot(df_plot, "minlfm", "maxwp", "Minimum LFM (%)", "Maximum WP (MPa)")
+fig4f <- make_lm_plot(df_plot, "minlfm", "minwp", "Minimum LFM (%)", "Minimum WP (MPa)")
+fig4g <- make_lm_plot(df_plot, "minlfm", "slope", "Minimum LFM (%)", "Model Slope")
+fig4h <- make_lm_plot(df_plot, "maxlfm", "slope", "Maximum LFM (%)", "Model Slope")
+fig4i <- make_lm_plot(df_plot, "minwp", "slope", "Minimum WP (MPa)", "Model Slope")
+fig4j <- make_lm_plot(df_plot, "maxwp", "slope", "Maximum WP (MPa)", "Model Slope")
+
+
+library(cowplot)
+
+legend <- get_legend(
+  fig4a + theme(legend.box.margin = margin(0, 0, 5, 0))
+)
+
+plots_figsx_param_corrs <- plot_grid(
+  fig4a + theme(legend.position = "none"),
+  fig4b + theme(legend.position = "none"),
+  fig4c + theme(legend.position = "none"),
+  fig4d + theme(legend.position = "none"),
+  fig4e + theme(legend.position = "none"),
+  fig4f + theme(legend.position = "none"),
+  fig4g + theme(legend.position = "none"),
+  fig4h + theme(legend.position = "none"), 
+  fig4i + theme(legend.position = "none"),
+  fig4j + theme(legend.position = "none"),
+  ncol = 5,
+  
+  labels = LETTERS[1:10]
+)
+
+plots_figsx_param_corrs_final <- plot_grid(plots_figsx_param_corrs, legend, rel_widths = c(1, .25), nrow = 1)
+plots_figsx_param_corrs_final
+
+
+ggsave(plot =plots_figsx_param_corrs, 
+        filename = here::here("figures", "figsx_param_corrs.jpg"), 
+       dpi = 600, width = 20, height = 7)
+
+#Save only the significant ones: 
+
+plots_fig4a <- plot_grid(
+  #fig4a + theme(legend.position = "none"),
+  #fig4b + theme(legend.position = "none"),
+ # fig4c + theme(legend.position = "none"),
+ # fig4d + theme(legend.position = "none"),
+ # fig4e + theme(legend.position = "none"),
+  fig4f + theme(legend.position = "none"),
+  fig4g + theme(legend.position = "none"),
+ # fig4i + theme(legend.position = "none"),
+  nrow = 1,
+  labels = LETTERS[1:2]
+)
+
+plots_fig4a_final <- plot_grid(plots_fig4a, legend, rel_widths = c(1, .25), nrow = 1)
+plots_fig4a_final
+
+
+ggsave(plot =plots_fig4a_final, 
+        filename = here::here("figures", "fig4a.jpg"), 
+       dpi = 600, width = 9, height = 3.5)
+
+```
+
+
 ####Figure 4. (isocline)
 
 Using common slope for all species: 
@@ -1071,6 +1310,49 @@ text(spres$minWP, 1 / spres$model1.int,  # (x, y) coordinates
      #pos = 5,                              # Adjust text positioning
      cex = 1)                            # Adjust text size to avoid overlap
 
+```
+
+```{r}
+# Save base R plot as high-resolution JPEG
+jpeg(filename = here::here("figures", "fig4.jpg"), 
+     width = 5, height = 3.5, units = "in", res = 600)
+
+# Reduce whitespace: bottom, left, top, right margins
+par(mar = c(3.5, 3.5, 1, 1), mgp = c(2, 0.6, 0))  # mgp controls label spacing
+# Re-run the plotting code below to draw inside the jpeg device
+
+# Step 7: Plot the conceptual model curve
+plot(MWPcrit, lfm.sat.vec, 
+     xlim = c(-8, 0), ylim = c(0, 4),
+     type = 'l', lwd = 0, col = "blue",
+     xlab = 'Minimum MWP (MPa)', 
+     ylab = 'LFM @ MWP = 0')
+
+# 60% LFM line
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.62)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "maroon")
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "60% LFM", pos = 4, col = "maroon", cex = 0.8)
+
+# 77% LFM line
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.77)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "goldenrod")
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "77% LFM", pos = 4, col = "goldenrod", cex = 0.8)
+
+# Add species labels (letters)
+text(spres$minWP, 1 / spres$model1.int,
+     labels = spres$Letter,
+     col = color_species[spres$SpCode6],
+     cex = 1)
+
+# Close the jpeg device
+dev.off()
+
 # Print letter-to-species mapping table
 print(letter_mapping)
 
@@ -1082,13 +1364,28 @@ letter_mapping %>%
   kable(format = "pipe", col.names = c("Letter", "Species"))
 
 write.csv(letter_mapping, file = here::here("results", "letter_mapping.csv"), row.names = FALSE)
-```
 
+# Load required libraries
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(here)
+
+# Add color to the 'Letter' column using HTML
+letter_mapping_colored <- letter_mapping %>%
+  mutate(Letter = paste0("<span style='color:", color_species[Species], "'>", Letter, "</span>"))
+
+# Save table as HTML
+letter_mapping_colored %>%
+  kable("html", escape = FALSE, col.names = c("Letter", "Species")) %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  save_kable(file = here("figures", "letter_mapping.html"))
+```
 ####Figure S2.
 
 Separate slopes for isoclines per species (probably not what we want to do though, v messy looking):
 
-```{r}
+```{r, eval = F}
 # Source custom functions if needed
 source(here('scripts', 'lfm_functions.R'))
 
@@ -1266,7 +1563,7 @@ letter_mapping <- data.frame(
 )
 ```
 
-#Q3:
+#Q3: trait correlations
 
 Question: How strongly are the species parameters associated with critical plant traits related to drought tolerance and access to water: Leaf Dry Matter Content (LDMC), water potential at 50% loss of conductivity (Ψ50), osmotic potential at turgor loss point (πTLP), and rooting depth?.
 
@@ -1293,10 +1590,336 @@ Set up plotting and data:
 #read in trait df.
 #Data is mean from TRY, 
 traits_df <- read_csv(here("data", "traits_rd_20250327.csv"))
+```
+
+
+```{r, warning = F}
+#Attach trait data to model data: 
+q3_df1 <- merge(traits_df, concept_params_df, by = ("species"), all = T) %>% 
+  #filter(group == "species") %>% 
+  filter(group == "grand_species") %>% 
+  mutate(int_spp = intercept,
+         intercept_lfm = 1/intercept,
+         slope_spp = slope,
+         min_lfm = minlfm,
+         max_lfm = maxlfm, 
+         min_mwp = minwp, 
+         max_mwp = maxwp
+         ) %>% 
+  select(-date, -mwp, -lfm, -ilfm, -x1, -sp_site, -tissue_age) %>% 
+  distinct()
+```
+
+
+```{r, warning = F}
+pds_q3_df_raw <- read_csv(here('data', 'all-data-combined-predawns.csv')) %>% 
+  clean_names()
+
+pds_q3_df_raw %>% 
+  ggplot(aes(y = wp, x = lfm, color = species, shape = study)) +
+  geom_point()
+```
+
+
+```{r, warning = F}
+pds_q3_df <- pds_q3_df_raw %>% 
+  group_by(species, study) %>% 
+  filter(time %in% "pd") %>% 
+  mutate(min_pd = min(wp, na.rm = T),
+         max_pd = max(wp, na.rm = T)) %>% 
+  select(-wp, -date, -lfm, -x1) %>% 
+  distinct()
+#add in predawns:
+q3_df <- merge(q3_df1, pds_q3_df, by = c("species", "study")) 
+```
+
+
+```{r, warning = F}
+#Function to view each relationship: 
+library(ggplot2)
+library(ggpmisc) # For stat_poly_eq
+library(dplyr)
+library(plotly)
+
+# Define function to create plots for multiple y-variables
+# Define function to create interactive plots
+plot_all_relationships <- function(data, x_var, y_vars) {
+  plots <- lapply(y_vars, function(y_var) {
+    # Fit linear model
+    model <- lm(reformulate(x_var, y_var), data = data)
+    eqn <- paste0(
+      "y = ", round(coef(model)[2], 3), "x + ", round(coef(model)[1], 3), 
+      "<br>R² = ", round(summary(model)$r.squared, 3), 
+      "<br>p = ", signif(summary(model)$coefficients[2, 4], 3)
+    )
+    
+    # Create ggplot
+    p <- ggplot(data, aes_string(x = x_var, y = y_var)) +
+      geom_point(aes(color = species, shape = study_nice, text = species)) +
+      geom_smooth(method = "lm", se = FALSE) +
+      labs(x = x_var, y = y_var, title = y_var) +
+      theme_minimal()
+    
+    # Convert to Plotly and add annotation
+    ggplotly(p, tooltip = "text") %>%
+      layout(annotations = list(
+        x = 0.05, y = 0.95, xref = "paper", yref = "paper",
+        text = eqn, showarrow = FALSE, align = "left"
+      ))
+  })
+  
+  return(plots)
+}
+
+# Define y-variables
+y_variables <- c("slope", "intercept", "intercept_lfm", "min_lfm", "min_mwp", "maxlfm", "min_pd", "max_pd")
+
+#remove outlider Salvias: 
+q3_df_outs <- q3_df %>% 
+  filter(!(species %in% c("SALMEL", "SALLEU")))
+```
+
+Is TLP related to any model params?
+```{r, warning = F}
+# Generate and store plots with psi_tlp as the x-axis
+plots <- plot_all_relationships(q3_df, "psi_tlp", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+```
+
+
+```{r, warning = F}
+plots <- plot_all_relationships(q3_df_outs, "psi_tlp", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+```
+
+Is P50 related to any model params?
+```{r, warning = F}
+
+# Generate and store plots with psi_tlp as the x-axis
+plots <- plot_all_relationships(q3_df, "plc50_stem", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+
+plots <- plot_all_relationships(q3_df_outs, "plc50_stem", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+```
+
+Is LDMC related to any model params?
+```{r, warning = F}
+
+# Generate and store plots with psi_tlp as the x-axis
+plots <- plot_all_relationships(q3_df, "ldmc", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+
+plots <- plot_all_relationships(q3_df_outs, "ldmc", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+```
+
+Is SLA related to any model params?
+```{r, warning = F}
+
+# Generate and store plots with psi_tlp as the x-axis
+plots <- plot_all_relationships(q3_df, "sla", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+
+plots <- plot_all_relationships(q3_df_outs, "sla", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+```
+
+Is rooting depth related to any model params?
+```{r, warning = F}
+
+# Generate and store plots with psi_tlp as the x-axis
+plots <- plot_all_relationships(q3_df, "max_rooting_depth_m", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+
+plots <- plot_all_relationships(q3_df_outs, "max_rooting_depth_m", y_variables)
+# Display the plots
+for (plot in plots) print(plot)
+```
+
+Is rooting depth related to any traits? (Just try for fun)
+```{r, warning = F}
+y_variables <- c("ldmc", "plc50_stem", "psi_tlp", "sla", "min_pd", "max_pd")
+# Generate and store plots with psi_tlp as the x-axis
+plots <- plot_all_relationships(q3_df, "max_rooting_depth_m", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+
+#remove QUDO, hard to measure P50 and its driving the relationship. 
+q3_df_outs <- q3_df %>% 
+  filter(!(species %in% c("QUEDOU")))
+
+plots <- plot_all_relationships(q3_df_outs, "max_rooting_depth_m", y_variables)
+
+# Display the plots
+for (plot in plots) print(plot)
+#Doesnt make a difference. 
+```
+
+Is TLP related to P50?
+```{r}
+q3_df %>% ggplot(aes(y = plc50_stem, x = psi_tlp)) +
+  geom_point() +
+  stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
+  stat_poly_line()
+```
+
+####Table SX. (traits)
+```{r}
+tablesx <- read_csv(here("data", "traits_rd_20250327.csv"))
+tablesx
+
+nrd <- tablesx %>% 
+  select(max_rooting_depth_m) %>% 
+  drop_na() %>% 
+  count()
+nrd
+
+nplc50 <- tablesx %>% 
+  select(plc50_stem) %>% 
+  drop_na() %>% 
+  count()
+nplc50
+
+n<- tablesx %>% 
+  select(5) %>% 
+  drop_na() %>% 
+  count()
+n
+  
+write_csv(tablesx, here("results", "figures", "tableSX_traits.csv"))
+```
+
+####Figure 5. (traits, grand)
+```{r}
+color_species =    scale_color_manual(values = c("#17154f", "#2f357c", "#6c5d9e", "#9d9cd5", "#b0799a", "#f6b3b0", "#e48171", "#bf3729", "#e69b00", "#f5bb50", "#ada43b", "#355828",
+                                 "#5b859e", "#1e395f", "#75884b", "#1e5a46", "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711"))
+
+q3_df_salvias <- q3_df %>% 
+  filter(species %in% c("SALLEU", "SALMEL"))
+
+q3_df_outs <- q3_df %>% 
+  filter(!(species %in% c("SALLEU", "SALMEL")))
+```
+
+```{r}
+#P50 x Min MPA
+model <- lm(min_mwp ~ plc50_stem, data = q3_df)
+eqn_salv <- paste0(
+      "y = ", round(coef(model)[2], 3), "x + ", round(coef(model)[1], 3), 
+      "\nR² = ", round(summary(model)$r.squared, 3), 
+      "\np = ", signif(summary(model)$coefficients[2, 4], 3)
+    )
+
+model_nosalv <- lm(min_mwp ~ plc50_stem, data = q3_df_outs)
+eqn_nosalv <- paste0(
+      "y = ", round(coef(model_nosalv)[2], 3), "x + ", round(coef(model_nosalv)[1], 3), 
+      "\nR² = ", round(summary(model_nosalv)$r.squared, 3), 
+      "\np = ", signif(summary(model_nosalv)$coefficients[2, 4], 3)
+    )
+
+fig5a <- ggplot() +
+  geom_point(data = q3_df, aes(y = min_mwp, x = plc50_stem, color = species)) +
+  geom_point(data = q3_df_salvias, aes(y = min_mwp, x = plc50_stem, color = species), shape = c(1), size = 6 ) +
+  color_species +
+    geom_smooth(data = q3_df, aes(y = min_mwp, x = plc50_stem), method = "lm", se = F, color = "#ab84a5") +
+  geom_smooth(data = q3_df_outs, aes(y = min_mwp, x = plc50_stem), method = "lm", se = F, color =  "#bf3729") +
+  #stat_poly_line(data = q3_df, aes(y = intercept_lfm, x = psi_tlp)) +
+  annotate("text", x = -9.75, y = -3.25, label = eqn_salv, color = "#ab84a5", size = 3.5, hjust = 0)+
+  annotate("text", x = -9.75, y = -4.5, label = eqn_nosalv, color =  "#bf3729", size = 3.5, hjust = 0) +
+  labs(y = "Minimum Midday Water Potential (MPa)",
+       x = "P50 (MPa)", 
+       color = "Species") 
+fig5a
+
+#P50 x Min LFM
+model <- lm(min_lfm ~ plc50_stem, data = q3_df)
+eqn_salv <- paste0(
+      "y = ", round(coef(model)[2], 3), "x + ", round(coef(model)[1], 3), 
+      "\nR² = ", round(summary(model)$r.squared, 3), 
+      "\np = ", signif(summary(model)$coefficients[2, 4], 3)
+    )
+
+model_nosalv <- lm(min_lfm ~ plc50_stem, data = q3_df_outs)
+eqn_nosalv <- paste0(
+      "y = ", round(coef(model_nosalv)[2], 3), "x + ", round(coef(model_nosalv)[1], 3), 
+      "\nR² = ", round(summary(model_nosalv)$r.squared, 3), 
+      "\np = ", signif(summary(model_nosalv)$coefficients[2, 4], 3)
+    )
+
+fig5b <- ggplot() +
+  geom_point(data = q3_df, aes(y = min_lfm, x = plc50_stem, color = species)) +
+  # geom_point(data = q3_df_salvias, aes(y = min_lfm, x = plc50_stem, color = species), shape = c(1), size = 6 ) +
+  color_species +
+    geom_smooth(data = q3_df, aes(y = min_lfm, x = plc50_stem), method = "lm", se = F, color = "#ab84a5") +
+  # geom_smooth(data = q3_df_outs, aes(y = min_lfm, x = plc50_stem), method = "lm", se = F, color =  "#bf3729") +
+  #stat_poly_line(data = q3_df, aes(y = intercept_lfm, x = psi_tlp)) +
+  annotate("text", x = -9.75, y = 1.05, label = eqn_salv, color = "#ab84a5", size = 3.5, hjust = 0)+
+  # annotate("text", x = -9.75, y = .9, label = eqn_nosalv, color =  "#bf3729", size = 3.5, hjust = 0) +
+  labs(y = "Minimum Seasonal LFM (%)",
+       x = "P50 (MPa)", 
+       color = "Species") 
+fig5b
+```
+
+
+####Combine:
+```{r}
+legend <- cowplot::get_legend(
+  # create some space to the left of the legend
+  fig5a + theme(legend.box.margin = margin(0, 0, 5, 0))
+)
+```
+
+```{r, fig.height=3.75, fig.width=9}
+plots <- cowplot::plot_grid(fig5a + theme(legend.position = "none"), 
+                   fig5b + theme(legend.position = "none"),
+                   nrow = 1)
+
+plots_legend_grandint <- cowplot::plot_grid(plots,
+                   legend,
+                   nrow = 1,
+                   rel_widths = c(1,.275))
+
+plots_legend_grandint
+
+ggsave(plot = plots_legend_grandint, here::here("figures", "fig5.jpg"), dpi = 600)
+```
+
+
+
+
+#-----
+
+#Species intercepts and slopes: 
+```{r, warning = F}
+#read in trait df.
+#Data is mean from TRY, 
+traits_df <- read_csv(here("data", "traits_rd_20250327.csv"))
 
 #Attach trait data to model data: 
 q3_df <- merge(traits_df, concept_params_df, by = ("species"), all = T) %>% 
   filter(group == "species") %>% 
+  #filter(group == "grand_species") %>% 
   mutate(int_spp = intercept,
          intercept_lfm = 1/intercept,
          slope_spp = slope,
@@ -1350,18 +1973,19 @@ y_variables <- c("slope", "intercept", "intercept_lfm", "min_lfm", "min_mwp")
 #remove outlider Salvias: 
 q3_df_outs <- q3_df %>% 
   filter(!(species %in% c("SALMEL", "SALLEU")))
-
 ```
 
 Is TLP related to any model params?
 ```{r, warning = F}
-
 # Generate and store plots with psi_tlp as the x-axis
 plots <- plot_all_relationships(q3_df, "psi_tlp", y_variables)
 
 # Display the plots
 for (plot in plots) print(plot)
+```
 
+
+```{r, warning = F}
 plots <- plot_all_relationships(q3_df_outs, "psi_tlp", y_variables)
 
 # Display the plots
@@ -1447,13 +2071,16 @@ for (plot in plots) print(plot)
 #Doesnt make a difference. 
 ```
 
-####Figure 5. (traits)
+####Figure SX. (traits, spp)
 ```{r}
 color_species =    scale_color_manual(values = c("#17154f", "#2f357c", "#6c5d9e", "#9d9cd5", "#b0799a", "#f6b3b0", "#e48171", "#bf3729", "#e69b00", "#f5bb50", "#ada43b", "#355828",
                                  "#5b859e", "#1e395f", "#75884b", "#1e5a46", "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711"))
 
 q3_df_salvias <- q3_df %>% 
   filter(species %in% c("SALLEU", "SALMEL"))
+
+q3_df_outs <- q3_df %>% 
+  filter(!(species %in% c("SALLEU", "SALMEL")))
 ```
 
 ```{r}
@@ -1651,33 +2278,28 @@ fig5f
 ```{r}
 legend <- cowplot::get_legend(
   # create some space to the left of the legend
-  fig5f + theme(legend.box.margin = margin(0, 0, 0, 12))
+  fig5f + theme(legend.box.margin = margin(0, 0, 0, 0))
 )
 ```
 
-```{r, fig.height=7, fig.width=13}
+```{r, fig.height=7, fig.width=9}
 plots <- cowplot::plot_grid(fig5a + theme(legend.position = "none"), 
-                   fig5b + theme(legend.position = "none"), 
-                   fig5c + theme(legend.position = "none"), 
+                   #fig5b + theme(legend.position = "none"), 
+                   #fig5c + theme(legend.position = "none"), 
                    fig5d + theme(legend.position = "none"), 
                    fig5e + theme(legend.position = "none"), 
                    fig5f + theme(legend.position = "none"),
                    nrow = 2)
 
-plots_legend <- cowplot::plot_grid(plots, 
+plots_legend_int <- cowplot::plot_grid(plots,
                    legend,
-                   rel_widths = c(1,.175))
-plots_legend
+                   rel_widths = c(1,.275))
+plots_legend_int
+ggsave(plots_legend_int, here::here("figures", "figsx_spptraits.jpg", dpi = 600))
 ```
 
-
-
-
-#-----
-
-
 ##---------
-```{r}
+```{r, eval = F}
 ## Preliminary analysis of 2021 Live Fuel Moisture (LFM) data
 
 rm(list = ls())  # Remove all objects from the workspace to start fresh
@@ -2182,7 +2804,7 @@ spres.all$SpCode6 <- substr(spres.all$species, 1, 6)
 
 Correlate species traits with physiological measurements
 
-```{r}
+```{r,eval = F}
 # Subset the results to coastal sites
 td <- spres.all[which(spres.all$study == 'Coastal'), ]
 dim(td)
@@ -2251,7 +2873,7 @@ cor(spresc$minLFM, spresc$PLC50.stem, use = 'pair')
 ```
 
 Conceptual Model
-```{r}
+```{r, eval = F}
 # Source custom functions again if needed
 source(here('scripts', 'lfm_functions.R'))
 
@@ -2308,7 +2930,7 @@ text(I(1 / model1.int) ~ minWP, data = spres[which(spres$study == 'Coastal'), ],
 #-----
 
 
-```{r}
+```{r, eval = F}
 ##2) Create a dataframe with species, study, or combined slopes and intercepts. 
 
 # Load necessary libraries

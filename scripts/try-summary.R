@@ -3,6 +3,35 @@ try <- read.csv(here('data', 'other_studies', 'try-trait-data.csv'))
 dim(try)
 str(try)
 
+try_salvias <- try %>% 
+  filter(AccSpeciesID %in% c(48133, 48136))
+
+#look at P50 and psimin 
+try_mmd<- try %>% 
+  #filter(TraitID %in% c(719, ))
+  filter(DataName %in% c("Minimum midday xylem pressure potential", 
+                         "Xylem water potential at which 50% of conductivity is lost (P50)",
+                         #"Mean P50 including only data from flushed curve",
+                         "Mean P50 including all data", 
+                         "Leaf osmotic potential at turgor loss")) %>% 
+  mutate(DataName = case_when(
+    DataName %in% c("Xylem water potential at which 50% of conductivity is lost (P50)",
+                    "Mean P50 including only data from flushed curve",
+                    "Mean P50 including all data") ~ "P50",
+    TRUE ~ as.character(DataName)
+  )) %>% 
+  group_by(SpeciesName, DataName) %>% 
+  summarise(mean = mean(StdValue)) %>% 
+  pivot_wider(names_from = DataName, 
+              values_from = mean)
+
+try_mmd %>% 
+  ggplot(aes(y = `Minimum midday xylem pressure potential`, 
+             x = P50, 
+             color = SpeciesName)) +
+  geom_point() +
+  geom_abline()
+
 tmn <- tapply(try$OrigValueStr,list(try$SpeciesName,try$OriglName),mean,na.rm=T)
 str(tmn)
 tmn
@@ -36,7 +65,7 @@ traits_df <- read_csv(here("data", "species-traits-withseki.csv")) %>%
   mutate(species = sp_code) %>% 
  # filter(sla < 20) %>% 
   mutate(psi_tlp = case_when(
-    psi_tlp %in% c(NA) & species %in% c("QUEDOU") ~ -2.568,
+    psi_tlp %in% c(NA) & species %in% c("QUEDOU") ~ -3.4,
     TRUE ~ as.numeric(psi_tlp)))
 
 SpCodes <- read_csv(here("data", "SpCodes.csv"))
@@ -79,9 +108,14 @@ rd_df <- read_csv(here("data", "other_studies", "Plant_Rooting_Depth_Database_20
   unique(rd_df$max_rooting_depth_m)
   
   traits_rd_df <- merge(rd_df, traits_df, by = c("sp_code"), all.y = T) %>% 
-    select(-dr_max_rooting_depth) #old attempt to manually find rooting deptha
+    select(-dr_max_rooting_depth) %>% #old attempt to manually find rooting deptha
+    filter(!(sp_code %in% c("ABICON", "PINJEF", "CALDEC")))  
                     
 write_csv(traits_rd_df, here("data", "traits_rd_20250327.csv"))
+
+
+
+#### ----- 
 
 #Older data, not sure this is used?
 ###-----------------
