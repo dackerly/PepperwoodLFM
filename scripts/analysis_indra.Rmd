@@ -261,7 +261,7 @@ write_csv(table1_df, here("results", "figures", "table1.csv"))
 fig1 <- df1 %>% 
   ggplot(aes(y = lfm*100, x = mwp, color = species)) + 
   geom_hline(yintercept = 60, linetype = "dotted") +
-    geom_point(alpha = .5) +
+    geom_point(alpha = .8) +
   labs(x = "Midday Water Poential (MPa)", 
        y = "Live Fuel Moisture (%)", 
        color = "Species", 
@@ -452,13 +452,6 @@ p1 + p2
 Intro/discussion:
 1) What are the aggregate and species-level relationships between leaf water potential and live fuel moisture, and how do they compare across studies? We predict that initial LFM and minimum WP will explain variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2), and that these will be largely consistent across species.  
 
-Analysis: 
-To answer Q1, we compared linear models with and without a species slope term using both BIC and AIC. BIC and AIC disagreed, with AIC selecting a model with the species interaction and BIC selecting the model without the interaction. For the main analysis, then, we chose the most parsimoneous model (the model without the species interaction), and visualize this model on the raw data in Figure 3. Models with separate species slopes are presenting in the supplementary information (Fig S1). 
-
-While less parsimoneous, we also investigated variation across species slopes to determine if there were patterns in slope across species or functional group. We also compare the species-level slope with physiological parameters. 
-
-Results: 
-The common slope across species was -0.179, while the individual species slopes ranged from -0.278 to -0.064. Using a model with a common slope resulted a model fit with R2 = 0.660, while the model with separate slopes per species had R2 = 0.683. 
 
 #####Figure SX. (linear fits)
 Linear relationship between iLFM and middays: 
@@ -509,9 +502,9 @@ cat("Best model based on AIC:", best_model, "\n")
 ```{r, models}
 library(lme4)
 
-mod_spp_int <- glm(ilfm ~ mwp*species, data = df1)
+mod_spp_int <- glm(ilfm ~ mwp*species, data = df1, family = gaussian)
 #mod_spp_int_lmer <- lmer(ilfm ~ mwp*species + species|study, data = df1, REML = T)
-mod_spp_noint <- glm(ilfm ~ mwp + species, data = df1)
+mod_spp_noint <- glm(ilfm ~ mwp + species, data = df1, family = gaussian)
 #mod_spp_lmer <- lmer(ilfm ~ mwp + species + 1|study, data = df1)
 
 car::vif(mod_spp_noint)
@@ -561,104 +554,92 @@ tablesx_ints_coefs <- broom::tidy(mod_spp_int) %>%
     p.value < 0.05 & p.value > 0.01 ~ "*", 
     TRUE ~ as.character(" ")
   ))
+tablesx_ints_coefs
 
-write_csv(tablesx_coefs, here("results", "figures", "tableSX_ints_coefs.csv"))
+write_csv(tablesx_ints_coefs, here("results", "figures", "tableSX_ints_coefs.csv"))
 ```
 
+DF with slopes and intercepts: 
 
-```{r, slopes}
-# Function to fit GLM and extract coefficients
-fit_glm_extract <- function(df, group_var) {
-  df %>%
-    group_by(across(all_of(group_var))) %>%  # Group by species or sp_site
-    summarise(
-      model = list(glm(ilfm ~ mwp, data = cur_data(), family = gaussian)),
-      .groups = "drop"
-    ) %>%
-    rowwise() %>%
-    mutate(
-      intercept = coef(model)[1],
-      slope = coef(model)[2]
-    ) %>%
-    select(all_of(group_var), intercept, slope)  # Keep only relevant columns
+```{r}
+library(dplyr)
+library(broom)
+library(tidyr)
+library(purrr)
+
+# Fit the models
+mod_common_slope <- glm(ilfm ~ mwp + species, data = df1, family = gaussian)
+mod_species_interaction <- glm(ilfm ~ mwp * species, data = df1, family = gaussian)
+mod_species_study <- glm(ilfm ~ mwp * sp_site, data = df1, family = gaussian)
+
+# Helper to extract coefficients and label the model
+extract_model_info <- function(model, model_name) {
+  tidy(model) %>%
+    mutate(model = model_name)
 }
 
-# Apply function for species
-coef_species <- fit_glm_extract(df1, "species") %>% 
-  mutate(group = "species")
+# Combine all model coefficients
+model_coeffs <- bind_rows(
+  extract_model_info(mod_common_slope, "common_slope"),
+  extract_model_info(mod_species_interaction, "species_interaction"),
+  extract_model_info(mod_species_study, "species_site_interaction")
+)
 
-# Apply function for study
-coef_study <- fit_glm_extract(df1, "study") %>% 
-  mutate(group = "study")
-```
+# Utility to get baseline level of factor variable (alphabetical if not set)
+baseline_level <- function(var) levels(factor(var))[1]
 
-#####Figure SX (differencest across studies)
-```{r, slopes}
-# Apply function for sp_site
-coef_sp_site <- fit_glm_extract(df1, "sp_site") %>% 
-  mutate(group = "sp_site")%>% 
-  separate_wider_delim(sp_site, names = c("species", "study"), "_") 
+# Function to compute slope and intercept per group
+compute_group_terms <- function(model, group_var, model_type) {
+  group_list <- unique(df1[[group_var]])
+  base_group <- baseline_level(df1[[group_var]])
 
-coef_sp_site_dupes <- coef_sp_site %>% 
-  group_by(species) %>% 
-  filter(n() >= 2)
+  map_dfr(group_list, function(grp) {
+    # Start with base intercept and slope
+    intercept <- coef(model)[["(Intercept)"]]
+    slope <- coef(model)[["mwp"]]
 
-coef_sp_site %>% 
-  ggplot() +
-  geom_point(aes(y = intercept, x = slope, shape = study), data = coef_sp_site, color = "black") +
-  geom_point(aes(y = intercept, x = slope, color = species), data = coef_sp_site_dupes, shape = c(1), size = 10)+
-  geom_smooth(method = "lm", se = F, aes(y = intercept, x = slope, color = species), data = coef_sp_site_dupes)
+    if (grp != base_group) {
+      int_term <- paste0(group_var, grp)
+      slope_term <- paste0("mwp:", group_var, grp)
 
-spp_dupes <- list(unique(coef_sp_site_dupes$species))
-spp_dupes
+      if (int_term %in% names(coef(model))) {
+        intercept <- intercept + coef(model)[[int_term]]
+      }
 
-df2 <- df %>% 
-  filter(species %in% c("ADEFAS", "HETARB", "QUEAGR", "QUEDOU", "QUEKEL"))
+      if (slope_term %in% names(coef(model))) {
+        slope <- slope + coef(model)[[slope_term]]
+      }
+    }
 
-mod1 <- glm(ilfm ~ mwp*species + study, data = df2, family = gaussian)
-mod2 <- glm(ilfm ~ mwp*species, data = df2, family = gaussian)
+    tibble(
+      group = grp,
+      intercept = intercept,
+      slope = slope,
+      model = model_type
+    )
+  })
+}
 
-anova(mod1, mod2)
-AIC(mod1, mod2)
+# Get results for each model
+coefs_common <- compute_group_terms(mod_common_slope, "species", "common_slope") %>% rename(species = group)
 
-car::vif(mod1)
-summary(mod1)
+coefs_species_int <- compute_group_terms(mod_species_interaction, "species", "species_interaction") %>% rename(species = group)
 
-car::vif(mod2)
-summary(mod2)
-```
-
-
-```{r, slopes}
-fit_glm_extract_grand <- function(df, group_var) {
-  # Fit a single slope model using all data
-  common_slope_model <- glm(ilfm ~ mwp, data = df, family = gaussian)
-  common_slope <- coef(common_slope_model)[2]  # Extract the common slope
+coefs_species_study <- compute_group_terms(mod_species_study, "sp_site", "species_site_interaction") %>% rename(sp_study = group)%>% 
+  separate_wider_delim(sp_study, names = c("species", "study"), "_") 
   
-  df %>%
-    group_by(across(all_of(group_var))) %>%  # Group by species
-    summarise(
-      model = list(glm(ilfm ~ 1 + offset(mwp * common_slope), data = cur_data(), family = gaussian)),  # Offset mwp with common slope
-      .groups = "drop"
-    ) %>%
-    rowwise() %>%
-    mutate(
-      intercept = coef(model)[1],  # Extract group-specific intercept
-      slope = common_slope  # Use the common slope
-    ) %>%
-    select(all_of(group_var), intercept, slope)  # Keep only relevant columns
-}
-
-coef_sp_grand <- fit_glm_extract_grand(df1, "species") %>% 
-  mutate(group = "grand_species")
 
 
-coef_compare_df <- bind_rows(coef_species, 
-                             coef_sp_site,
-                             #coef_sp_study,
-                             coef_sp_grand)
+# Combine into one dataframe
+coef_compare_df  <- bind_rows(coefs_common, coefs_species_int, coefs_species_study) %>% 
+  mutate(group = case_when(
+    model %in% c("species_interaction") ~ "species",
+    model %in% c("common_slope") ~ "grand",
+    model %in% c("species_site_interaction") ~ "sp_study",
+  )) %>% 
+  select(-study)
 
-range(coef_species$slope)
+range(coefs_species_int$slope)
 
 #compare:
 coef_compare_df %>% 
@@ -667,13 +648,81 @@ coef_compare_df %>%
              color = group)) +
   geom_point(alpha = .4)
 
+
+summary(coef_compare_df
+        )
+
+concept_both_df <- merge(coef_compare_df, df1, by = c("species"), all = T) %>% 
+  filter(!(model == "species_site_interaction")) 
+concept_study_df <- merge(coef_compare_df, df1, by = c("species"), all = T) %>% 
+  filter(model == "species_site_interaction")
+
+concept_df_all <- bind_rows(concept_both_df, concept_study_df)
+
+concept_df <- concept_df_all %>% 
+  filter(group == "grand")
+
 ```
 
+#####Figure SX (differences across studies)
+```{r, slopes}
+coef_sp_site_dupes <- coefs_species_study %>% 
+  group_by(species) %>% 
+  filter(n() >= 2)
+
+spp_dupes <- list(unique(coef_sp_site_dupes$species))
+spp_dupes
+
+df2 <- df %>% 
+  filter(species %in% c("ADEFAS", "HETARB", "QUEAGR", "QUEDOU", "QUEKEL"))
+
+# Step 1: Run interaction models for each species
+interaction_results <- df2 %>%
+  group_by(species) %>%
+  group_modify(~ {
+    model <- lm(ilfm ~ mwp * sp_site, data = .x)
+    interaction_p <- anova(model)[["Pr(>F)"]][which(rownames(anova(model)) == "mwp:sp_site")]
+    tibble(interaction_p = interaction_p)
+  }) %>%
+  mutate(sig_interaction = interaction_p < 0.05)
+
+df_plot <- df2 %>%
+  left_join(interaction_results, by = "species")
+
+figSX_studydiffs <- ggplot(df_plot, aes(x = mwp, y = ilfm, color = sp_site, group = sp_site)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, aes(size = sig_interaction)) +
+  scale_size_manual(values = c(`TRUE` = 1.4, `FALSE` = 0.5), guide = "none") +
+  facet_wrap(~ species, scales = "free") +
+  labs(
+   # title = "Relationship between ILFM and MWP across sites by species",
+   # subtitle = "Bold lines indicate species with significant site-specific slopes (interaction p < 0.05)",
+    x = "Minimum Water Potential (MPa)",
+    y = "1/LFM"
+  ) +
+  #theme_minimal() +
+  theme(
+    legend.position = "right",
+    strip.text = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", size = 16)
+  ) +
+  scale_color_manual(values = c("#17154f", "#2f357c", "#6c5d9e", "#9d9cd5", "#b0799a", "#f6b3b0", "#e48171", "#bf3729", "#e69b00", "#f5bb50", "#ada43b", "#355828",
+                                 "#5b859e", "#1e395f", "#75884b", "#1e5a46", "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711")) +
+  labs(color = "Species_Site")
+figSX_studydiffs
+
+ggsave(plot =figSX_studydiffs, 
+        filename = here::here("figures", "figSX_studydiffs.jpg"), 
+       dpi = 600, width = 9, height = 5)
+
+model <- lm(ilfm ~ mwp * sp_site, data = df2)
+summary(model)
+```
 
 ```{r, predict}
 # Predict water potential (mwp) for each sp_site
 df_pred <- df1 %>%
-  left_join(coef_species, by = "species") %>%  # Merge coefficients, using separate slope and intercept per species
+  left_join(coefs_species_int, by = "species") %>%  # Merge coefficients, using separate slope and intercept per species
   mutate(
     mwp_pred = (ilfm - intercept) / slope,  # Solve for mwp using linear equation
    # lfm_pred = 1 / ilfm,  # Transform ilfm back to lfm
@@ -705,7 +754,7 @@ ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = sp_site)) +
 #-----------
 # Predict water potential (mwp) for each sp_site
 df_pred <- df1 %>%
-  left_join(coef_sp_grand, by = "species") %>%  # Merge coefficients, using separate slope and intercept per species
+  left_join(coefs_common, by = "species") %>%  # Merge coefficients, using separate slope and intercept per species
   mutate(
     mwp_pred = (ilfm - intercept) / slope,  # Solve for mwp using linear equation
    # lfm_pred = 1 / ilfm,  # Transform ilfm back to lfm
@@ -736,31 +785,9 @@ ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = species,
   theme_minimal()
 ```
 
-```{r, concept_dfs}
-#concept df has the grand slope and individual intercepts:
-concept_df <- merge(coef_sp_grand, df1, 
-                    by = c("species"), all = T)
-
-#concept df has the grand slope and individual intercepts:
-concept_slopes_df <- merge(coef_species, df1, 
-                    by = c("species"), all = T)
-
-concept_both_df <- bind_rows(concept_df %>% mutate(slope_type = "grand"),
-                             concept_slopes_df %>% mutate(slope_type = "species"))
-```
 
 #####Figure 3. (models)
 ```{r, fig.height=5, fig.width=7}
-
-color_species <- scale_color_manual(values = c(
-  "ADEFAS" = "#17154f", "ARBMEN" = "#2f357c", "ARCGLA" = "#6c5d9e", "ARCPAT" = "#9d9cd5", 
-  "CEACOR" = "#b0799a", "CEACUN" = "#f6b3b0", "CEAPAR" = "#e48171", "CEASPI" = "#bf3729", 
-  "CERBET" = "#e69b00", "ERIFAS" = "#f5bb50", "HETARB" = "#ada43b", "MALLAU" = "#355828", 
-  "PSEMEN" = "#5b859e", "QUEAGR" = "#1e395f", "QUEBER" = "#75884b", "QUEDOU" = "#1e5a46", 
-  "QUEDUR" = "#df8d71", "QUEGAR" = "#af4f2f", "QUEKEL" = "#d48f90", "SALLEU" = "#732f30", 
-  "SALMEL" = "#ab84a5", "UMBCAL" = "#59385c"
-))
-
 # Define color palette for sites (color-blind friendly)
 color_manual <- scale_color_manual(values  = c(
   "Pepperwood" = "#009E73",  # Green
@@ -769,14 +796,14 @@ color_manual <- scale_color_manual(values  = c(
   "Sedgwick"   = "#D55E00"))   # Red
 
 # Identify the least negative (maximum) observed mwp per species
-species_thresholds <- concept_df %>%
-  filter(group == "grand_species") %>%
+species_thresholds <- concept_both_df %>%
+  filter(group == "grand") %>%
   group_by(species) %>%
   summarise(min_mwp = max(mwp, na.rm = TRUE), .groups = "drop")
 
 # Generate model-predicted lines for each species and study
 model_lines <- concept_df %>%
-  filter(group == "grand_species") %>% 
+  filter(group == "grand") %>% 
   distinct(species, study, intercept, slope) %>%  
   group_by(species, study) %>%
   tidyr::expand_grid(mwp = seq(min(concept_df$mwp, na.rm = TRUE), max(concept_df$mwp, na.rm = TRUE), length.out = 100)) %>%
@@ -793,7 +820,7 @@ model_lines_dashed <- model_lines %>% filter(line_type == "dashed")
 
 # Scatter plot of ilfm vs mwp with model lines
 fig3a <- ggplot(concept_df %>%
-  filter(group == "grand_species"), aes(x = -1 * mwp, y = ilfm)) +
+  filter(group == "grand"), aes(x = -1 * mwp, y = ilfm)) +
   geom_point(aes(color = species), alpha = 0.3, color = "black") +  
   geom_line(data = model_lines_solid, aes(x = -1 * mwp, y = ilfm_pred, color = study, group = interaction(species, study)), size = 0.5) +  
   geom_line(data = model_lines_dashed, aes(x = -1 * mwp, y = ilfm_pred, color = study, group = interaction(species, study)), size = 0.5, linetype = "dashed") +  
@@ -807,7 +834,7 @@ fig3a <- ggplot(concept_df %>%
 
 # Scatter plot of lfm vs mwp with model lines
 fig3b <- ggplot(concept_df %>%
-  filter(group == "grand_species"), aes(x = -1 * mwp, y = lfm)) +
+  filter(group == "grand"), aes(x = -1 * mwp, y = lfm)) +
   geom_point(aes(color = species), alpha = 0.3, color = "black") +  
   geom_line(data = model_lines_solid, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = interaction(species, study)), size = 0.5) +  
   geom_line(data = model_lines_dashed, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = interaction(species, study)), size = 0.5, linetype = "dashed") +  
@@ -822,7 +849,7 @@ fig3b <- ggplot(concept_df %>%
 # Extract legend
 legend <- cowplot::get_legend(
   ggplot(concept_df %>%
-    filter(group == "grand_species"), aes(x = -1 * mwp, y = lfm)) +
+    filter(group == "grand"), aes(x = -1 * mwp, y = lfm)) +
     geom_line(data = model_lines_solid, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = interaction(species, study)), size = 0.5) +
     geom_line(data = model_lines_dashed, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = interaction(species, study)), size = 0.5, linetype = "dashed") +
     labs(color = "Study") +
@@ -839,9 +866,19 @@ ggsave(plot = fig3, here::here("figures", "fig3.jpg"), dpi = 600, height = 4, wi
 
 
 ```{r, figure1}
+color_species <- scale_color_manual(values = c(
+  "ADEFAS" = "#17154f", "ARBMEN" = "#2f357c", "ARCGLA" = "#6c5d9e", "ARCPAT" = "#9d9cd5", 
+  "CEACOR" = "#b0799a", "CEACUN" = "#f6b3b0", "CEAPAR" = "#e48171", "CEASPI" = "#bf3729", 
+  "CERBET" = "#e69b00", "ERIFAS" = "#f5bb50", "HETARB" = "#ada43b", "MALLAU" = "#355828", 
+  "PSEMEN" = "#5b859e", "QUEAGR" = "#1e395f", "QUEBER" = "#75884b", "QUEDOU" = "#1e5a46", 
+  "QUEDUR" = "#df8d71", "QUEGAR" = "#af4f2f", "QUEKEL" = "#d48f90", "SALLEU" = "#732f30", 
+  "SALMEL" = "#ab84a5", "UMBCAL" = "#59385c"
+))
+
+
 # Generate model-predicted lines for each species
 model_lines <- concept_df %>%
-  filter(group == "grand_species") %>% 
+  filter(group == "grand") %>% 
   distinct(species,intercept, slope) %>%  # Get unique specie
   group_by(species) %>%
   summarise(
@@ -854,7 +891,7 @@ model_lines <- concept_df %>%
 
 # Scatter plot of ilfm vs mwp with model lines
 fig3a <- ggplot(concept_df %>%
-  filter(group == "grand_species"), aes(x = -1*mwp, y = ilfm)) +
+  filter(group == "grand"), aes(x = -1*mwp, y = ilfm)) +
   geom_point(aes(color = species), alpha = 0.5) +  # Scatter points colored by species
   geom_line(data = model_lines, aes(x = -1*mwp, y = ilfm_pred, color = species), size = 0.5) +  # Model lines colored by study
   labs(
@@ -864,12 +901,12 @@ fig3a <- ggplot(concept_df %>%
     color = "Study"
   ) +
   color_species + 
-  theme_minimal() +
+  #theme_minimal() +
   theme(legend.position = "false") 
 
 # Scatter plot of ilfm vs mwp with model lines
 fig3b <- ggplot(concept_df %>%
-  filter(group == "grand_species"), aes(x = -1*mwp, y = lfm)) +
+  filter(group == "grand"), aes(x = -1*mwp, y = lfm)) +
   geom_point(aes(color = species), alpha = 0.5) +  # Scatter points colored by species
   geom_line(data = model_lines, aes(x = -1*mwp, y = 1/ilfm_pred, color = species), size = .5) +  # Model lines colored by study
   labs(
@@ -878,18 +915,38 @@ fig3b <- ggplot(concept_df %>%
     #title = "Model fits with species intercept and common slope",
     color = "Study"
   ) +
-  theme_minimal() +
+  #theme_minimal() +
   color_species + 
   theme(legend.position = "false")
 
 fig3 <- cowplot::plot_grid(fig3a, fig3b, nrow = 2)
 fig3
+
+
+# Extract legend
+legend <- cowplot::get_legend(
+  ggplot(concept_df %>%
+    filter(group == "grand"), aes(x = -1 * mwp, y = lfm)) +
+    geom_line(data = model_lines_solid, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = species, group = interaction(species, study)), size = 0.5) +
+    labs(color = "Study") +
+    color_species
+)
+
+# Combine plots
+fig3.1 <- cowplot::plot_grid(fig3a, fig3b, nrow = 2)
+fig3.1 <- cowplot::plot_grid(fig3.1, legend, nrow = 1, rel_widths = c(1, 0.5))
+fig3.1
+
+ggsave(plot = fig3.1, here::here("figures", "figSX_species.jpg"), dpi = 600, height = 4, width = 6, units = "in")
 ```
+
 
 ####Figure S1.
 ```{r, figure1}
+concept_slopes_df <- concept_both_df %>%
+  filter(group == "species")
 # Generate model-predicted lines for each species
-model_lines <- concept_slopes_df %>%
+model_lines <- concept_slopes_df  %>% 
   distinct(species, intercept, slope) %>%  # Get unique species-study combinations
   group_by(species) %>%
   summarise(
@@ -901,51 +958,54 @@ model_lines <- concept_slopes_df %>%
 
 
 # Scatter plot of ilfm vs mwp with model lines
-ggplot(concept_slopes_df , aes(x = -1*mwp, y = ilfm)) +
+figSXa <- ggplot(concept_slopes_df , aes(x = -1*mwp, y = ilfm)) +
   geom_point(aes(color = species), alpha = 0.5) +  # Scatter points colored by species
   geom_line(data = model_lines, aes(x = -1*mwp, y = ilfm_pred, color = species), size = 0.5) +  # Model lines colored by study
   labs(
     x = "Water Potential (MWP)",
     y = "iLFM",
-    title = "Model fits with species intercept and slope",
+   # title = "Model fits with species intercept and slope",
     color = "Study"
   ) +
   color_species + 
-  theme_minimal() +
+  #theme_minimal() +
   theme(legend.position = "false")
 
 # Scatter plot of ilfm vs mwp with model lines
-ggplot(concept_slopes_df , aes(x = -1*mwp, y = lfm)) +
+figSXb <- ggplot(concept_slopes_df , aes(x = -1*mwp, y = lfm)) +
   geom_point(aes(color = species), alpha = 0.5) +  # Scatter points colored by species
   geom_line(data = model_lines, aes(x = -1*mwp, y = 1/ilfm_pred, color = species), size = .5) +  # Model lines colored by study
   labs(
     x = "Water Potential (MWP)",
     y = "LFM",
-    title = "Model fits with species intercept and slope",
+    #title = "Model fits with species intercept and slope",
     color = "Study"
   ) +
-  theme_minimal() +
+  #theme_minimal() +
   color_species + 
   theme(legend.position = "false")
+
+# Extract legend
+legend <- cowplot::get_legend(
+  ggplot(concept_df %>%
+    filter(group == "grand"), aes(x = -1 * mwp, y = lfm)) +
+    geom_line(data = model_lines_solid, aes(x = -1 * mwp, y = 1 / ilfm_pred, color = species, group = interaction(species, study)), size = 0.5) +
+    labs(color = "Study") +
+    color_species
+)
+
+# Combine plots
+figSX <- cowplot::plot_grid(figSXa, figSXb, nrow = 2)
+figSX
+figSX <- cowplot::plot_grid(figSX, legend, nrow = 1, rel_widths = c(1, 0.5))
+figSX
+
+ggsave(plot = figSX, here::here("figures", "figSX_species_int.jpg"), dpi = 600, height = 4, width = 6, units = "in")
 ```
 
 #Q2: 
 
 Question: Across species, what are the contributions of initial LFM and minimum WP to explain variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2)? 
-
-Analysis: We assessed the relationship between initial LFM (both the model intercept per species and study, and the maximum observed LFM per species and study) and minimum LFM, as well as the relationship between minimum WP and minimum LFM to determine if either conceptual parameter helped describe variation in dry season LFM. 
-
-Following the conceptual model (Figure 2), we can partition the minimum LFM for each species into two components: the regression intercept (LFM at ΨMD = 0, or the theoretical LFM at full hydration) and ΨMIN experienced across the data set (which usually occurs in late summer/early fall). These two values are plotted against each other (Figure 6), with isoclines for the minimum LFM data as a function of the two values. Isoclines are calculated by solving for minWP along a sequence of 1/LFM values and for different specific LFM values (in this case, 60% and 77%, to represent critical thresholds of fuel moisture). Inverted LFM is converted back to LFM, and the resulting lines are plotted in Figure 4. Each isocline, then, indicate a contour where a specific LFM value is reached. Species are plotted on top of the isoclines in relation to their minimum WP and theoretical maximum LFM. 
-
-(We ran a variance decomposition on factors likely to explain variation in minimum seasonal LFM: minimum seasonal water potential, initial LFM as calculated by the intercept of our conceptual model, species, and study site. We used the function VarCorr from the R package MuMIn, and the model form minilfm ~ (1|intercept_lfm) + (1|minwp) + (1|species) + (1|study) in R version X.XX). VarCorr estimates the variance of each random effect term) - UPDATE: this makes no sense to do becuase each species has 1 intercept and one minwp. 
-
-Results: 
-Species-specific model intercept was a generally poor predictor of both minimum LFM (R2 = 0.04) and minimum WP (R2 < 0.01). Minimum water potential was slightly better related to maximum LFM (R2 = 0.07), and to minimum LFM (R2 = 0.08), while maximum WP was slightly better related to minimum LFM (R2 = 0.12). Overall, there were few compelling relationships between minimum or maximum observed WP or LFM when these were taken individually. 
-
-When taken together, in teh form of the isocline analysis, we found trends in minimum WP and maximum LFM, where either having high values of early season max LFM or having less negative minimum water potentials can keep species from crossing critical LFM thresholds. Having low values of either Min WP or MAX LFM can result in falling below critical thresholds. We found that 13 out of 22 species had combinations putting them below the critical threshold of 60%, and an addiitonl 4 between 60-77% LFM (Figure 4).
-
-Discussion: Knowing early-season WP or LFM does not lend much insight into late season LFM individually (Fig SX, lack of R2 relationship), but having the correct combination of low seasonal water potential and low max LFM can push a species into the threshold of critical fire size. 
-
 
 ```{r, minwpvsmaxlfm}
 concept_params_df <- concept_both_df %>% 
@@ -968,7 +1028,7 @@ concept_df_wide <- concept_params_df %>%
   pivot_wider(names_from = group, values_from = intercept, names_repair = "unique")
 
 concept_df_wide %>% 
-ggplot(aes(x = grand_species, y = species, color = spp_code)) +
+ggplot(aes(x = grand, y = species, color = spp_code)) +
   geom_abline() +
   geom_point()
 
@@ -982,6 +1042,7 @@ summary(q2mod)
 head(concept_params_df)
 ```
 
+For species-interaction model, are there sig relationships? 
 
 ```{r}
 params_test_df <- concept_params_df %>% 
@@ -1088,6 +1149,18 @@ stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
   stat_poly_line()
 fig4g
 
+fig4h <- params_test_df %>% 
+  filter(group == "species") %>% 
+  ggplot(aes(y = slope, 
+             x = minwp, 
+            )) +
+  geom_point(aes( color = species)) +
+ # geom_smooth(method = "lm", se  = F) +
+  color_species +
+stat_poly_eq(use_label("R2", "F", "P", "n", sep = "*\"; \"*")) +
+  stat_poly_line()
+fig4h
+
 # fig4h <- params_test_df %>% 
 #   filter(group == "species") %>% 
 #   ggplot(aes(y = maxlfm_minwp, 
@@ -1134,7 +1207,7 @@ make_lm_plot <- function(df, xvar, yvar, xlab, ylab, eq_x = NULL, eq_y = NULL, e
 
 df_plot <- params_test_df %>% filter(group == "species")
 
-fig4a <- make_lm_plot(df_plot, "minlfm", "intercept_lfm", "Minimum LFM (%)", "End-of-season Intercept LFM")
+fig4a <- make_lm_plot(df_plot, "minlfm", "intercept_lfm", "Minimum LFM (%)", "Intercept LFM")
 fig4b <- make_lm_plot(df_plot, "minlfm", "intercept", "Minimum LFM (%)", "Model Intercept (1/LFM)")
 fig4c <- make_lm_plot(df_plot, "minwp", "intercept", "Minimum WP (MPa)", "Model Intercept (1/LFM)")
 fig4d <- make_lm_plot(df_plot, "maxlfm", "minwp", "Maximum LFM (%)", "Minimum WP (MPa)")
@@ -1158,26 +1231,29 @@ plots_figsx_param_corrs <- plot_grid(
   fig4c + theme(legend.position = "none"),
   fig4d + theme(legend.position = "none"),
   fig4e + theme(legend.position = "none"),
-  fig4f + theme(legend.position = "none"),
+  #fig4f + theme(legend.position = "none"),
   fig4g + theme(legend.position = "none"),
   fig4h + theme(legend.position = "none"), 
   fig4i + theme(legend.position = "none"),
   fig4j + theme(legend.position = "none"),
-  ncol = 5,
+  ncol = 3,
   
-  labels = LETTERS[1:10]
+  labels = LETTERS[1:9]
 )
 
 plots_figsx_param_corrs_final <- plot_grid(plots_figsx_param_corrs, legend, rel_widths = c(1, .25), nrow = 1)
 plots_figsx_param_corrs_final
 
 
-ggsave(plot =plots_figsx_param_corrs, 
+ggsave(plot =plots_figsx_param_corrs_final, 
         filename = here::here("figures", "figsx_param_corrs.jpg"), 
-       dpi = 600, width = 20, height = 7)
+       dpi = 600, width = 12, height = 10)
 
-#Save only the significant ones: 
+#Save only the significant ones:
+```
 
+
+```{r}
 plots_fig4a <- plot_grid(
   #fig4a + theme(legend.position = "none"),
   #fig4b + theme(legend.position = "none"),
@@ -1212,7 +1288,7 @@ Using common slope for all species:
 
 # Ensure 'spres' has all the necessary columns from the previous steps
 spres <- concept_params_df %>% 
-  filter(group == "grand_species") %>% 
+  filter(group == "grand") %>% 
   mutate(model1.int = intercept,
          model1.slp = slope,  # Ensure slope is named 'model1.slp'
          SpCode6 = species, 
@@ -1311,11 +1387,11 @@ text(spres$minWP, 1 / spres$model1.int,  # (x, y) coordinates
      cex = 1)                            # Adjust text size to avoid overlap
 
 ```
-
+To save the isocline: 
 ```{r}
 # Save base R plot as high-resolution JPEG
 jpeg(filename = here::here("figures", "fig4.jpg"), 
-     width = 5, height = 3.5, units = "in", res = 600)
+     width = 5, height = 4, units = "in", res = 600)
 
 # Reduce whitespace: bottom, left, top, right margins
 par(mar = c(3.5, 3.5, 1, 1), mgp = c(2, 0.6, 0))  # mgp controls label spacing
@@ -1363,24 +1439,56 @@ library(knitr)
 letter_mapping %>% 
   kable(format = "pipe", col.names = c("Letter", "Species"))
 
-write.csv(letter_mapping, file = here::here("results", "letter_mapping.csv"), row.names = FALSE)
+write.csv(letter_mapping, file = here::here("figures", "letter_mapping.csv"), row.names = FALSE)
+```
+To save isocline labels: 
 
-# Load required libraries
+```{r}
 library(dplyr)
 library(knitr)
 library(kableExtra)
 library(here)
 
-# Add color to the 'Letter' column using HTML
+# Create the colored table
 letter_mapping_colored <- letter_mapping %>%
   mutate(Letter = paste0("<span style='color:", color_species[Species], "'>", Letter, "</span>"))
 
-# Save table as HTML
-letter_mapping_colored %>%
+# Generate the HTML table
+table_html <- letter_mapping_colored %>%
   kable("html", escape = FALSE, col.names = c("Letter", "Species")) %>%
-  kable_styling(full_width = FALSE, position = "left") %>%
-  save_kable(file = here("figures", "letter_mapping.html"))
+  kable_styling(full_width = FALSE, position = "left")
+
+# Build full HTML page with styling for 2-column layout and smaller text
+html_page <- paste0(
+  "<!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset='UTF-8'>
+    <title>Letter Mapping</title>
+    <style>
+      body {
+        font-size: 0.85em;
+        column-count: 2;
+        column-gap: 2em;
+        font-family: sans-serif;
+      }
+      table {
+        margin-bottom: 1em;
+        break-inside: avoid;
+      }
+    </style>
+  </head>
+  <body>",
+  table_html,
+  "</body>
+  </html>"
+)
+
+# Save to file
+writeLines(html_page, here("figures", "letter_mapping.html"))
 ```
+
+
 ####Figure S2.
 
 Separate slopes for isoclines per species (probably not what we want to do though, v messy looking):
@@ -1450,6 +1558,7 @@ for (sp in unique(spres$species)) {
 text(I(1 / model1.int) ~ minWP, data = spres,
      labels = spres$species, col = 'blue')  # Add species codes as labels
 ```
+
 ```{r, isocline_fig, eval = F}
 # Source custom functions if needed
 source(here('scripts', 'lfm_functions.R'))
@@ -1567,24 +1676,6 @@ letter_mapping <- data.frame(
 
 Question: How strongly are the species parameters associated with critical plant traits related to drought tolerance and access to water: Leaf Dry Matter Content (LDMC), water potential at 50% loss of conductivity (Ψ50), osmotic potential at turgor loss point (πTLP), and rooting depth?.
 
-Analysis: 
-To determine the relationship between conceptual model parameters and traits and linkages with drought response strategies, we compiled trait data from TRY. Traits included Leaf Dry Matter Content (LDMC), water potential at 50% loss of conductivity (Ψ50), and osmotic potential at turgor loss point (πTLP). We additionally compiled data on rooting depth from the groundwater resource hub (CITE, accessed on March 27th 2025). We calculated the species mean for each trait. For species and traits where data were not available, we supplemmented with data compiled from a web search or with our own measurements from previous studies. These are indicated in Supplementary Table 1. 
-
-We analyzed the relationships beween model parameters and trait data using linear models. We used the slope taken from the species interacton model determined in answering Q1, and species-level intercepts. The intercepts are in 1/LFM, so we converted these back to LFM for the regression analysis. 
-
-Results: Most model parameters were not related to traits. 
-- TLP was significantly related to the theoretical maximum LFM (1/model intercept), but the relationship was overall weak (r2 = 0.23) and primarily driven by the influence of the two salvia species in our study, which has especially high intercepts and less negative TLPS. Removing these species cause the relationship to no longer be significant. 
-- Stem p50 was Significantly related to min midday water potential (R2 = 0.26, p = 0.0256), min LFM (R2 = 0.251, p = 0.0289), which became stronger when we analyze the data without the Salvia (min MWP: R2 = 0.545, p < 0.001; min LFM: R2 = 0.345, p = 0.131).
-- LDMC was unrelated to everying except Max LFM, but this was again driven by the Salvia (with SAL: R3 = .324, p = 0.0137; Without SAL: R2 = 0.011, p = 0.697).
-- SLA: SLA was significantly related to the model slope, with steeper slopes in species with higher SLA values (R2 = 0.318, p = 0.0182). The theoretical max LFM was also related, with significant negative slope with increased SLA (R2 = 0.523, p = 0.001). These trends, however, were largely again driven by high SLA salvia species, which, when removed, weakened the relationships  such that they were not longer significant. 
-
-- max rooting depth was unrelated to any parameters. 
-
-- Max rooting depth was unrelated to any traits. Showed a positive trend with p50, but it was not significant.  
-
-
-Discussion: We expected that TLP might be related to minimum water potential, but it was not significant although was in the correct direction. 
-
 Set up plotting and data: 
 ```{r, warning = F}
 #read in trait df.
@@ -1596,8 +1687,9 @@ traits_df <- read_csv(here("data", "traits_rd_20250327.csv"))
 ```{r, warning = F}
 #Attach trait data to model data: 
 q3_df1 <- merge(traits_df, concept_params_df, by = ("species"), all = T) %>% 
+ # select(-study) %>% 
   #filter(group == "species") %>% 
-  filter(group == "grand_species") %>% 
+  filter(group == "grand") %>% 
   mutate(int_spp = intercept,
          intercept_lfm = 1/intercept,
          slope_spp = slope,
@@ -1613,7 +1705,8 @@ q3_df1 <- merge(traits_df, concept_params_df, by = ("species"), all = T) %>%
 
 ```{r, warning = F}
 pds_q3_df_raw <- read_csv(here('data', 'all-data-combined-predawns.csv')) %>% 
-  clean_names()
+  clean_names() %>% 
+  filter(!(species %in% c("PINJEF", "ABICON", "CALDEC")))
 
 pds_q3_df_raw %>% 
   ggplot(aes(y = wp, x = lfm, color = species, shape = study)) +
@@ -1623,14 +1716,18 @@ pds_q3_df_raw %>%
 
 ```{r, warning = F}
 pds_q3_df <- pds_q3_df_raw %>% 
-  group_by(species, study) %>% 
+  group_by(species) %>% 
   filter(time %in% "pd") %>% 
   mutate(min_pd = min(wp, na.rm = T),
          max_pd = max(wp, na.rm = T)) %>% 
   select(-wp, -date, -lfm, -x1) %>% 
   distinct()
 #add in predawns:
-q3_df <- merge(q3_df1, pds_q3_df, by = c("species", "study")) 
+q3_df <- merge(q3_df1, pds_q3_df, by = c("species", "study"), all = T) %>% 
+  select(-study, -study_nice, -sp_site, -tissue_age, -time) %>% 
+  group_by(species) %>% 
+  fill(c("min_pd", "max_pd"), .direction = "downup") %>% 
+  distinct() 
 ```
 
 
@@ -1655,7 +1752,7 @@ plot_all_relationships <- function(data, x_var, y_vars) {
     
     # Create ggplot
     p <- ggplot(data, aes_string(x = x_var, y = y_var)) +
-      geom_point(aes(color = species, shape = study_nice, text = species)) +
+      geom_point(aes(color = species, text = species)) +
       geom_smooth(method = "lm", se = FALSE) +
       labs(x = x_var, y = y_var, title = y_var) +
       theme_minimal()
@@ -1757,7 +1854,7 @@ for (plot in plots) print(plot)
 
 Is rooting depth related to any traits? (Just try for fun)
 ```{r, warning = F}
-y_variables <- c("ldmc", "plc50_stem", "psi_tlp", "sla", "min_pd", "max_pd")
+y_variables <- c("ldmc", "plc50_stem", "psi_tlp", "sla", "minwp", "maxwp", "min_pd", "max_pd")
 # Generate and store plots with psi_tlp as the x-axis
 plots <- plot_all_relationships(q3_df, "max_rooting_depth_m", y_variables)
 
@@ -1812,16 +1909,14 @@ write_csv(tablesx, here("results", "figures", "tableSX_traits.csv"))
 ####Figure 5. (traits, grand)
 ```{r}
 color_species =    scale_color_manual(values = c("#17154f", "#2f357c", "#6c5d9e", "#9d9cd5", "#b0799a", "#f6b3b0", "#e48171", "#bf3729", "#e69b00", "#f5bb50", "#ada43b", "#355828",
-                                 "#5b859e", "#1e395f", "#75884b", "#1e5a46", "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711"))
+                                 "#5b859e", "#1e395f", "#75884b", "#1e5a46", "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711","#b38651"))
 
 q3_df_salvias <- q3_df %>% 
   filter(species %in% c("SALLEU", "SALMEL"))
 
 q3_df_outs <- q3_df %>% 
   filter(!(species %in% c("SALLEU", "SALMEL")))
-```
 
-```{r}
 #P50 x Min MPA
 model <- lm(min_mwp ~ plc50_stem, data = q3_df)
 eqn_salv <- paste0(
@@ -1879,18 +1974,12 @@ fig5b <- ggplot() +
        x = "P50 (MPa)", 
        color = "Species") 
 fig5b
-```
 
-
-####Combine:
-```{r}
 legend <- cowplot::get_legend(
   # create some space to the left of the legend
   fig5a + theme(legend.box.margin = margin(0, 0, 5, 0))
 )
-```
 
-```{r, fig.height=3.75, fig.width=9}
 plots <- cowplot::plot_grid(fig5a + theme(legend.position = "none"), 
                    fig5b + theme(legend.position = "none"),
                    nrow = 1)
@@ -1907,7 +1996,6 @@ ggsave(plot = plots_legend_grandint, here::here("figures", "fig5.jpg"), dpi = 60
 
 
 
-
 #-----
 
 #Species intercepts and slopes: 
@@ -1919,7 +2007,7 @@ traits_df <- read_csv(here("data", "traits_rd_20250327.csv"))
 #Attach trait data to model data: 
 q3_df <- merge(traits_df, concept_params_df, by = ("species"), all = T) %>% 
   filter(group == "species") %>% 
-  #filter(group == "grand_species") %>% 
+  #filter(group == "grand") %>% 
   mutate(int_spp = intercept,
          intercept_lfm = 1/intercept,
          slope_spp = slope,
@@ -2282,7 +2370,7 @@ legend <- cowplot::get_legend(
 )
 ```
 
-```{r, fig.height=7, fig.width=9}
+```{r}
 plots <- cowplot::plot_grid(fig5a + theme(legend.position = "none"), 
                    #fig5b + theme(legend.position = "none"), 
                    #fig5c + theme(legend.position = "none"), 
@@ -2293,9 +2381,9 @@ plots <- cowplot::plot_grid(fig5a + theme(legend.position = "none"),
 
 plots_legend_int <- cowplot::plot_grid(plots,
                    legend,
-                   rel_widths = c(1,.275))
+                   rel_widths = c(1,.35))
 plots_legend_int
-ggsave(plots_legend_int, here::here("figures", "figsx_spptraits.jpg", dpi = 600))
+ggsave(plot = plots_legend_int, here::here("figures", "figsx_spptraits.jpg"), dpi = 600, height = 6, width = 8)
 ```
 
 ##---------
