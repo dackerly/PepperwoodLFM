@@ -1282,7 +1282,7 @@ ggsave(plot =plots_fig4a_final,
 
 Using common slope for all species: 
 
-```{r}
+```{r, fig.height=4, fig.width=6}
 # Read species results
 # spres_old <- read.csv(here('results', 'species-results.csv'))
 
@@ -1330,8 +1330,8 @@ lfm.sat.vec <- 1 / ilfm.sat.vec
 plot(MWPcrit, lfm.sat.vec, 
      xlim = c(-8, 0), ylim = c(0, 4),
      type = 'l', lwd = 0, col = "blue",
-     xlab = 'Minimum MWP (MPa)', 
-     ylab = 'LFM @ MWP = 0')
+     xlab = 'Minimum Minimum Water Potential (MPa)', 
+     ylab = 'LFM @ Midday Water Potential = 0')
 
 # Step 8: Repeat the calculations for different LFM thresholds
 
@@ -1349,7 +1349,7 @@ for (i in 1:length(ilfm.sat.vec)) {
 }
 lfm.sat.vec <- 1 / ilfm.sat.vec
 lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "goldenrod")
-text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "77% LFM", pos = 4, col = "goldenrod", cex = 0.8)
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.8)
 
 # Step 9: Add species data points to the conceptual model plot
 # text(I(1 / model1.int) ~ minWP,
@@ -1401,8 +1401,8 @@ par(mar = c(3.5, 3.5, 1, 1), mgp = c(2, 0.6, 0))  # mgp controls label spacing
 plot(MWPcrit, lfm.sat.vec, 
      xlim = c(-8, 0), ylim = c(0, 4),
      type = 'l', lwd = 0, col = "blue",
-     xlab = 'Minimum MWP (MPa)', 
-     ylab = 'LFM @ MWP = 0')
+     xlab = 'Minimum Minimum Water Potential (MPa)', 
+     ylab = 'LFM @ Midday Water Potential = 0')
 
 # 60% LFM line
 for (i in 1:length(ilfm.sat.vec)) {
@@ -1418,7 +1418,7 @@ for (i in 1:length(ilfm.sat.vec)) {
 }
 lfm.sat.vec <- 1 / ilfm.sat.vec
 lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "goldenrod")
-text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "77% LFM", pos = 4, col = "goldenrod", cex = 0.8)
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.8)
 
 # Add species labels (letters)
 text(spres$minWP, 1 / spres$model1.int,

@@ -1,24 +1,24 @@
-species,Genus_species,common_me,family,growth_form,dec_ever,PeW,PrC,SeR,StR
-ADEFAS,Adenostoma fasciculatum,Chamise,Rosaceae,shrub,Ever,16,,,33
-ARBMEN,Arbutus menziesii,Madrone,Ericaceae,tree,Ever,12,,,
-ARCGLA,Arctostaphylos glandulosa,Eastwood manzanita,Ericaceae,shrub,Ever,,,,23
-ARCPAT,Arctostaphylos patula,Greenleaf manzanita,Ericaceae,shrub,Ever,,125,,
-CEACOR,Ceanothus cordulatus,Whitethorn ceanothus,Rhamceae,shrub,Ever,,140,,
-CEACUN,Ceanothus cuneatus,Bickbush,Rhamceae,shrub,Ever,6,,,
-CEAPAR,Ceanothus parryi,Parry ceanothus,Rhamceae,shrub,Ever,9,,,
-CEASPI,Ceanothus spinosus,Greenbark ceanothus,Rhamceae,shrub,Ever,,,,32
-CERBET,Cercocarpus betuloides,Mountain mahogany,Rosaceae,tree/shrub,Ever,,,,29
-ERIFAS,Eriogonum fasciculatum,California buckwheat,Polygoceae,shrub,Semi-Dec,,,,29
-HETARB,Heteromeles arbutifolia,Toyon,Rosaceae,shrub,Ever,12,,,36
-MALLAU,Malosma lauri,Laurel sumac,Acardiaceae,shrub,Ever,,,,30
-PSEMEN,Pseudotsuga menziesii,Douglas-fir,Piceae,tree,Ever,12,,,
-QUEAGR,Quercus agrifolia,Live oak,Fagaceae,tree,Ever,12,,62,35
-QUEBER,Quercus berberidifolia,Scrub oak,Fagaceae,tree,Ever,,,,32
-QUEDOU,Quercus douglasii,Blue oak,Fagaceae,tree,Dec,12,,174,
-QUEDUR,Quercus durata,Leather oak,Fagaceae,tree,Ever,12,,,
-QUEGAR,Quercus garrya,Oregon white oak,Fagaceae,tree,Dec,12,,,
-QUEKEL,Quercus kelloggii,California black oak,Fagaceae,tree,Dec,12,53,,
-SALLEU,Salvia leucophylla,Purple sage,Lamiaceae,shrub,Dec,,,,30
-SALMEL,Salvia mellifera,Black sage,Lamiaceae,shrub,Dec,,,,28
-UMBCAL,Umbellularia californica,California bay,Lauraceae,shrub,Ever,12,,,
+species,Genus_species,common_name,family,growth_form,dec_ever,PeW,PrC,SeR,StR
+ADEFAS,Adenostoma fasciculatum,Chamise,Rosaceae,shrub,Ever,16,NA,NA,33
+ARBMEN,Arbutus menziesii,Madrone,Ericaceae,tree,Ever,12,NA,NA,NA
+ARCGLA,Arctostaphylos glandulosa,Eastwood manzanita,Ericaceae,shrub,Ever,NA,NA,NA,23
+ARCPAT,Arctostaphylos patula,Greenleaf manzanita,Ericaceae,shrub,Ever,NA,125,NA,NA
+CEACOR,Ceanothus cordulatus,Whitethorn ceanothus,Rhamnaceae,shrub,Ever,NA,140,NA,NA
+CEACUN,Ceanothus cuneatus,Bickbush,Rhamnaceae,shrub,Ever,6,NA,NA,NA
+CEAPAR,Ceanothus parryi,Parry ceanothus,Rhamnaceae,shrub,Ever,9,NA,NA,NA
+CEASPI,Ceanothus spinosus,Greenbark ceanothus,Rhamnaceae,shrub,Ever,NA,NA,NA,32
+CERBET,Cercocarpus betuloides,Mountain mahogany,Rosaceae,tree/shrub,Ever,NA,NA,NA,29
+ERIFAS,Eriogonum fasciculatum,California buckwheat,Polygonaceae,shrub,Semi-Dec,NA,NA,NA,29
+HETARB,Heteromeles arbutifolia,Toyon,Rosaceae,shrub,Ever,12,NA,NA,36
+MALLAU,Malosma laurina,Laurel sumac,Anacardiaceae,shrub,Ever,NA,NA,NA,30
+PSEMEN,Pseudotsuga menziesii,Douglas-fir,Pinaceae,tree,Ever,12,NA,NA,NA
+QUEAGR,Quercus agrifolia,Live oak,Fagaceae,tree,Ever,12,NA,62,35
+QUEBER,Quercus berberidifolia,Scrub oak,Fagaceae,tree,Ever,NA,NA,NA,32
+QUEDOU,Quercus douglasii,Blue oak,Fagaceae,tree,Dec,12,NA,174,NA
+QUEDUR,Quercus durata,Leather oak,Fagaceae,tree,Ever,12,NA,NA,NA
+QUEGAR,Quercus garryana,Oregon white oak,Fagaceae,tree,Dec,12,NA,NA,NA
+QUEKEL,Quercus kelloggii,California black oak,Fagaceae,tree,Dec,12,53,NA,NA
+SALLEU,Salvia leucophylla,Purple sage,Lamiaceae,shrub,Dec,NA,NA,NA,30
+SALMEL,Salvia mellifera,Black sage,Lamiaceae,shrub,Dec,NA,NA,NA,28
+UMBCAL,Umbellularia californica,California bay,Lauraceae,shrub,Ever,12,NA,NA,NA
 Total,-,-,-,-,-,139,318,236,337
