@@ -32,7 +32,7 @@ df <- read_csv(here::here("data", "all-data-combined.csv")) %>%
   tissue_age %in% c(NA, NaN) ~ "both",
   TRUE ~ as.character(tissue_age)
   )) %>% 
-  filter(!(sp_site %in% c("ABICON_SEKI", "PINJEF_SEKI", "CALDEC_SEKI"))) #these act really odd, dont include
+  filter(!(sp_site %in% c("ABICON_SEKI", "PINJEF_SEKI", "CALDEC_SEKI", "PSEMEN_Pepperwood"))) #these act really odd, dont include
   # filter(!(sp_site %in% c("ABICON_SEKI", "PINJEF_SEKI") & tissue_age %in% c("old")))
 
 ```
@@ -351,13 +351,31 @@ points(rep(-6.7, length(sites)), seq(2.84, 2.64 - 0.2 * (length(sites) - 1), len
 #Conceptual Model:
 
 
-#####Figure 2: 
+#####Figure 2: (color)
 ```{r}
 ## conceptual model
 source(here("scripts", "lfm_functions.R"))
 spres <- read.csv(here("results", "species-results.csv"))
 head(spres)
 slp <- -0.198
+
+#MWPvec <- seq(-6,0,length.out=25)
+ilfm.sat.vec <- seq(0.25,1.25,length.out=25)
+MWPcrit <- c()
+for (i in 1:length(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i],slp),1/0.7)
+lfm.sat.vec <- 1/ilfm.sat.vec
+plot(MWPcrit,lfm.sat.vec,xlim=c(-8,0),ylim=c(0,4),type='l',lwd=2,xlab='Minimum MWP (MPa)',ylab='LFM @ MWP=0')
+
+for (i in 1:length(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i],slp),1/0.5)
+lfm.sat.vec <- 1/ilfm.sat.vec
+lines(MWPcrit,lfm.sat.vec,xlim=c(-8,0),ylim=c(0,4),lwd=1)
+
+for (i in 1:length(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i],slp),1/1)
+lfm.sat.vec <- 1/ilfm.sat.vec
+lines(MWPcrit,lfm.sat.vec,xlim=c(-8,0),ylim=c(0,4),lwd=1)
+
+#points(I(1/model1.int)~minWP,data=spres[which(spres$study=='Coastal'),],pch=19)
+text(I(1/model1.int)~minWP,data=spres[which(spres$study=='Coastal'),],labels=letters)
 
 # conceptual figure, in inverted space - need to flip to LFM# conceptual figulettersre, in inverted space - need to flip to LFM
 lfm.sat <- c(0.9,0.5)
@@ -369,7 +387,7 @@ head(xy)
 plot(xy$MWP,xy$LFM)
 
 (MWPcrit <- solveForX(c(lfm.sat[2],slp),1/0.7))
-
+#------
 (max.iLFM <- lfm.sat + min.MWP*slp)
 (min.LFM <- 1/max.iLFM)
 
@@ -392,61 +410,150 @@ points(xy1[c(1,100),c('MWP','LFM')],cex=2,pch=c(1,19))
 lines(xy2$MWP,xy2$LFM,type='l')
 points(xy2[c(1,100),c('MWP','LFM')],cex=2,pch=c(1,19))
 par(op)
-```
-Trying to do it in ggplot, need to come back to this. maybe the above is fine. 
-```{r, eval = F}
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(patchwork) # For side-by-side plotting
 
-# Define slope and LFM saturation values
-slp <- -0.2
-lfm.sat <- c(0.9, 0.5)
-min.MWP <- c(-6, -3)
+#-----
+# Choose distinct colors for each line
+cols <- c("steelblue3", "tomato3")  # i=1 -> cols[1], i=2 -> cols[2]
 
-# Compute inverse plot data
+xy <- inversePlotData(c(min.MWP[1], 0), c(lfm.sat[1], slp))
+plot(xy$MWP, xy$LFM)
+
+(MWPcrit <- solveForX(c(lfm.sat[2], slp), 1/0.7))
+
+(max.iLFM <- lfm.sat + min.MWP * slp)
+(min.LFM  <- 1 / max.iLFM)
+
+op <- par(mfrow = c(1, 2))
+
+## Panel 1: 1/LFM vs MWP
+plot(c(-7, 0), c(0, 3), type = "n", xlab = "MWP", ylab = "1/LFM")
+mtext("A", side = 3, adj = 0, line = 1.2, font = 2, cex = 1.2)  # Panel label
+x <- vector("list", 2)
+y <- vector("list", 2)
+for (i in 1:2) {
+  x[[i]] <- c(0, min.MWP[i])
+  y[[i]] <- c(lfm.sat[i], max.iLFM[i])
+  # open circle for first point, filled circle for second
+  lines(x[[i]], y[[i]], col = cols[i], lwd = 2)
+  points(x[[i]][1], y[[i]][1], pch = 21, bg = "white", col = cols[i], cex = 2, lwd = 2)
+  points(x[[i]][2], y[[i]][2], pch = 19, col = cols[i], cex = 2)
+}
+
+## Panel 2: LFM vs MWP
 xy1 <- inversePlotData(c(0, min.MWP[1]), c(lfm.sat[1], slp))
 xy2 <- inversePlotData(c(0, min.MWP[2]), c(lfm.sat[2], slp))
+plot(c(-7, 0), c(0, 3), type = "n", xlab = "MWP", ylab = "LFM")
+mtext("B", side = 3, adj = 0, line = 1.2, font = 2, cex = 1.2)  # Panel label
 
-# Convert to data frames
-df1 <- data.frame(MWP = xy1$MWP, LFM = xy1$LFM, Group = "Set 1")
-df2 <- data.frame(MWP = xy2$MWP, LFM = xy2$LFM, Group = "Set 2")
-df_inverted <- bind_rows(df1, df2)
+lines(xy1$MWP, xy1$LFM, col = cols[1], lwd = 2)
+points(xy1[1, c("MWP", "LFM")], pch = 21, bg = "white", col = cols[1], cex = 2, lwd = 2)
+points(xy1[100, c("MWP", "LFM")], pch = 19, col = cols[1], cex = 2)
 
-# Compute non-inverted plot data
+lines(xy2$MWP, xy2$LFM, col = cols[2], lwd = 2)
+points(xy2[1, c("MWP", "LFM")], pch = 21, bg = "white", col = cols[2], cex = 2, lwd = 2)
+points(xy2[100, c("MWP", "LFM")], pch = 19, col = cols[2], cex = 2)
+
+par(op)
+
+#----
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+
+# Colors mapped consistently across both panels
+cols <- c("steelblue3", "tomato3")
+names(cols) <- c("1","2")  # map to id "1" and "2"
+
+# --- Data prep ---------------------------------------------------------------
+
+# Panel A (1/LFM vs MWP): two straight line segments with endpoints
 max.iLFM <- lfm.sat + min.MWP * slp
-min.LFM <- 1 / max.iLFM
 
-df_non_inverted <- tibble(
+dfA_lines <- tibble(
+  id = factor(c(1,1, 2,2)),
   MWP = c(0, min.MWP[1], 0, min.MWP[2]),
-  LFM = c(lfm.sat[1], min.LFM[1], lfm.sat[2], min.LFM[2]),
-  Group = c("Set 1", "Set 2", "Set 2","Set 1")
+  invLFM = c(lfm.sat[1], max.iLFM[1], lfm.sat[2], max.iLFM[2])
 )
 
-# Inverted plot (MWP vs LFM)
-p1 <- ggplot(df_inverted, aes(x = MWP, y = LFM, color = Group)) +
-  geom_line(size = 1) +
-  geom_point(data = df_inverted %>% filter(MWP %in% c(0, min.MWP)), 
-             aes(x = MWP, y = LFM), size = 4, shape = c(1, 19, 1, 19)) +
-  labs(x = "MWP", y = "LFM", title = "Inverted Space") +
-  theme_minimal() +
-  ylim(0, 3)+
-  xlim(-7, 0)
+dfA_open <- dfA_lines %>%
+  group_by(id) %>%
+  slice_head(n = 1) %>%
+  ungroup()
 
-# Non-inverted plot (1/LFM vs MWP)
-p2 <- ggplot(df_non_inverted, aes(x = MWP, y = 1/LFM, color = Group)) +
-  geom_line(size = 1) +
-  geom_point(size = 4, shape = c(1, 19, 1, 19)) +
-  labs(x = "MWP", y = "1/LFM", title = "Non-Inverted Space") +
-  theme_minimal() +
-  ylim(0, 3) +
-  xlim(-7, 0)
+dfA_filled <- dfA_lines %>%
+  group_by(id) %>%
+  slice_tail(n = 1) %>%
+  ungroup()
 
-# Combine the two plots side by side
-p1 + p2
+# Panel B (LFM vs MWP): two curves from inversePlotData
+xy1 <- inversePlotData(c(0, min.MWP[1]), c(lfm.sat[1], slp)) %>% mutate(id = factor(1))
+xy2 <- inversePlotData(c(0, min.MWP[2]), c(lfm.sat[2], slp)) %>% mutate(id = factor(2))
+dfB_curve <- bind_rows(xy1, xy2)
 
+dfB_open <- dfB_curve %>%
+  group_by(id) %>%
+  slice_head(n = 1) %>%
+  ungroup()
+
+dfB_filled <- dfB_curve %>%
+  group_by(id) %>%
+  slice_tail(n = 1) %>%
+  ungroup()
+
+# --- Plots -------------------------------------------------------------------
+
+# Panel A: 1/LFM vs MWP
+pA <- ggplot() +
+  geom_line(data = dfA_lines,
+            aes(x = MWP, y = invLFM, group = id, color = id), linewidth = 1) +
+  geom_vline(xintercept = 0, linetype="dotted") +
+  geom_point(data = dfA_open,
+             aes(x = MWP, y = invLFM, color = id),
+             shape = 21, fill = "white", size = 3.5, stroke = 1.2) +
+  geom_point(data = dfA_filled,
+             aes(x = MWP, y = invLFM, color = id),
+             shape = 19, size = 3.5) +
+  annotate("text", x = -7, y = 3, label = "A", fontface = "bold",
+           hjust = 0, vjust = 1, size = 5) +
+  coord_cartesian(xlim = c(-7, 0), ylim = c(0, 3)) +
+  scale_color_manual(values = cols, guide = "none") +
+  labs(x = "Midday Water Potential (MPa)", y = "1/LFM (%)")
+
+# Panel B: LFM vs MWP
+pB <- ggplot(dfB_curve, aes(x = MWP, y = LFM, color = id)) +
+  geom_line(linewidth = 1) +
+  geom_vline(xintercept = 0, linetype="dotted") +
+  geom_point(data = dfB_open,
+             aes(x = MWP, y = LFM),
+             shape = 21, fill = "white", size = 3.5, stroke = 1.2) +
+  geom_point(data = dfB_filled,
+             aes(x = MWP, y = LFM),
+             shape = 19, size = 3.5) +
+  annotate("text", x = -7, y = 3, label = "B", fontface = "bold",
+           hjust = 0, vjust = 1, size = 5) +
+  coord_cartesian(xlim = c(-7, 0), ylim = c(0, 3)) +
+  scale_color_manual(values = cols, guide = "none") +
+  labs(x = "Midday Water Potential (MPa)", y = "LFM (%)")
+
+# Side-by-side layout (no legend)
+pA + pB + plot_layout(ncol = 2)
+
+# Create the combined plot
+final_plot <- pA + pB + plot_layout(ncol = 2, 
+                                    axis_titles = "collect")
+final_plot
+
+# Save it
+ggsave(
+  filename = here("figures", "Figure2_color.png"),  # or .pdf, .jpg, etc.
+  plot     = final_plot,
+  width    = 8,     # inches
+  height   = 4,     # inches
+  dpi      = 300    # high resolution
+)
+#----
 ```
+
 
 #Q1: 
 Intro/discussion:
@@ -750,7 +857,10 @@ ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = sp_site)) +
     title = "Predicted vs Original LFM"
   ) +
   theme_minimal()
+```
 
+
+```{r, predict}
 #-----------
 # Predict water potential (mwp) for each sp_site
 df_pred <- df1 %>%
@@ -1486,6 +1596,198 @@ html_page <- paste0(
 
 # Save to file
 writeLines(html_page, here("figures", "letter_mapping.html"))
+```
+####Figure 4, (NEW isocline with genus)
+```{r}
+library(dplyr)
+
+# ----------------------------
+# Build spres from parameters
+# ----------------------------
+spres <- concept_params_df %>% 
+  filter(group == "grand") %>% 
+  mutate(
+    model1.int = intercept,
+    model1.slp = slope,      # slope column for convenience
+    SpCode6    = species, 
+    minWP      = minwp
+  )
+
+# ----------------------------
+# Join Genus info (REQUIRED)
+#   - Replace `species_key_df` with your actual table name
+#   - Must contain columns: SpCode6, Genus
+# ----------------------------
+spres <- spres %>%
+  left_join(SpCodes %>% select(SpCode6, Genus), by = "SpCode6")
+
+# Optional check for any species missing a Genus
+if (any(is.na(spres$Genus))) {
+  warning("Some SpCode6 have no Genus in species_key_df.")
+}
+
+# ----------------------------
+# Generate conceptual curves
+# ----------------------------
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
+
+# If you truly want species-specific MWPcrit per species, your list builder is fine.
+# Keeping for completeness (not used directly in the plot below):
+
+MWPcrit_list <- list()
+for (sp in unique(spres$species)) {
+  species_slope <- spres %>% filter(species == sp) %>% pull(model1.slp)
+  MWPcrit <- numeric(length(ilfm.sat.vec))
+  for (i in seq_along(ilfm.sat.vec)) {
+    MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.7)
+  }
+  MWPcrit_list[[sp]] <- MWPcrit
+}
+
+# Use a "typical" slope for drawing the conceptual lines (so code below is robust).
+# If you prefer a different summary (mean, a specific species, etc.), change here:
+species_slope <- median(spres$model1.slp, na.rm = TRUE)
+
+# ----------------------------
+# Plot open: 
+# ----------------------------
+
+# Open JPEG device
+jpeg(
+  filename = here::here("figures", "Fig2_genus.jpg"),
+  width    = 7,   
+  height   = 4.5,     
+  units    = "in",
+  res      = 300    # high resolution
+)
+
+
+## 1) Make room on the right (set before plotting)
+
+op <- par(no.readonly = TRUE)                  # save current par
+# Tight margins + space for legend in right margin
+par(mar = c(4, 4, 0.5, 6), mgp = c(2.2, 0.6, 0), xpd = TRUE) # add right margin & allow drawing in margins
+
+# ----------------------------
+# Base curve at 70% (reference), multiplied by 100
+# ----------------------------
+# --- Build the base (70%) reference once, then scale y to percent for plotting
+MWPcrit <- numeric(length(ilfm.sat.vec))
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1/0.7)
+}
+lfm_pct <- (1 / ilfm.sat.vec) * 100  # scale to percent for plotting
+
+plot(
+  MWPcrit, lfm_pct,
+  xlim = c(-8, 0.1), ylim = c(0, 400),
+  type = "l", lwd = 0, col = "blue",
+  xlab = "Minimum Minimum Water Potential (MPa)",
+  ylab = "LFM (%) @ Midday Water Potential = 0",
+  yaxt = "n"
+)
+axis(2, at = seq(0, 400, 100), labels = seq(0, 400, 100), las = 1)
+
+# --- 60% LFM curve (x depends on threshold; y is the same lfm_pct scale)
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1/0.62)
+}
+lines(MWPcrit, lfm_pct, lwd = 1.5, col = "maroon")
+text(tail(MWPcrit, 1), tail(lfm_pct, 1), labels = "60% LFM", pos = 1, col = "maroon", cex = 0.9)
+
+# --- 77% LFM curve
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1/0.77)
+}
+lines(MWPcrit, lfm_pct, lwd = 1.5, col = "goldenrod")
+text(tail(MWPcrit, 1), tail(lfm_pct, 1), labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.9)
+
+# --- Species letters (also scaled to percent on y)
+text(
+  x = spres$minWP,
+  y = (1 / spres$model1.int) * 100,
+  labels = spres$Letter,
+  col = genus_cols[spres$Genus],
+  cex = 1
+)
+
+# ----------------------------
+# Assign unique letters per species (unchanged)
+# ----------------------------
+unique_species <- unique(spres$SpCode6)
+species_letters <- setNames(letters[seq_along(unique_species)], unique_species)
+spres$Letter <- species_letters[spres$SpCode6]
+
+# Lookup (if needed elsewhere)
+letter_mapping <- data.frame(
+  Letter  = spres$Letter,
+  Species = spres$SpCode6
+) %>% distinct()
+
+# ----------------------------
+# Colors by Genus (CHANGE HERE)
+# ----------------------------
+# Okabe–Ito palette; expand if more genera than base colors
+okabe_ito <- c("#17154f", "#5b859e", "#6c5d9e", "#9d9cd5", "#732f30", "#f6b3b0", "#e48171", "#bf3729",  "#e69b00", "#ab84a5", "#355828","#ada43b", "#5b859e", "#1e395f", "#75884b", "#df8d71", "#af4f2f", "#d48f90", "#59385c", "#d8b847", "#b38711")
+
+genus_levels <- sort(unique(spres$Genus))
+ng <- length(genus_levels)
+genus_colors <- if (ng > length(okabe_ito)) {
+  grDevices::colorRampPalette(okabe_ito)(ng)
+} else {
+  okabe_ito[seq_len(ng)]
+}
+genus_cols <- setNames(genus_colors, genus_levels)
+
+# ----------------------------
+# Plot species letters colored by Genus (REPLACEMENT)
+# ----------------------------
+text(
+  x = spres$minWP,
+  y = 1 / spres$model1.int * 100,
+  labels = spres$Letter,
+  col = genus_cols[spres$Genus],
+  cex = 1
+)
+
+# Optional legend:
+# Build the legend text: "a - Abies concolor"
+## 2) Legend: outside plot border, inside device
+# Build unique mapping (as before)
+legend_df <- data.frame(
+  Letter  = spres$Letter,
+  Species = spres$SpCode6,
+  Genus   = spres$Genus
+) %>% distinct()
+
+legend_text   <- paste0(legend_df$Letter, " - ", legend_df$Species)
+legend_colors <- genus_cols[legend_df$Genus]
+
+# Place legend using user coords just beyond the top-right plot corner
+usr <- par("usr")  # c(xmin, xmax, ymin, ymax)
+x_off <- diff(usr[1:2]) * 0.02   # 2% of x-range to the right of plot box
+y_off <- diff(usr[3:4]) * 0.02   # 01% down from the top
+
+legend(
+  x = usr[2] + x_off,            # a touch to the right of the plot border
+  y = usr[4] - y_off,            # a touch below the top border
+  xjust = 0, yjust = 1,          # anchor legend’s top-left corner
+  legend = legend_text,
+  text.col = legend_colors,
+  pch = 15, col = legend_colors,
+  bty = "n", cex = 0.8,
+  y.intersp = 0.9
+)
+
+## 3) (Optional) restore par when done
+# par(op)
+
+# Restore par settings
+par(op)
+
+# Close device to write file
+dev.off()
+ 
 ```
 
 
