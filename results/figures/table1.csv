@@ -11,6 +11,7 @@ CERBET,Cercocarpus betuloides,Mountain mahogany,Rosaceae,tree/shrub,Ever,NA,NA,N
 ERIFAS,Eriogonum fasciculatum,California buckwheat,Polygonaceae,shrub,Semi-Dec,NA,NA,NA,29
 HETARB,Heteromeles arbutifolia,Toyon,Rosaceae,shrub,Ever,12,NA,NA,36
 MALLAU,Malosma laurina,Laurel sumac,Anacardiaceae,shrub,Ever,NA,NA,NA,30
+PSEMEN,Pseudotsuga menziesii,Douglas-fir,Pinaceae,tree,Ever,12,NA,NA,NA
 QUEAGR,Quercus agrifolia,Live oak,Fagaceae,tree,Ever,12,NA,62,35
 QUEBER,Quercus berberidifolia,Scrub oak,Fagaceae,tree,Ever,NA,NA,NA,32
 QUEDOU,Quercus douglasii,Blue oak,Fagaceae,tree,Dec,12,NA,174,NA
@@ -20,4 +21,4 @@ QUEKEL,Quercus kelloggii,California black oak,Fagaceae,tree,Dec,12,53,NA,NA
 SALLEU,Salvia leucophylla,Purple sage,Lamiaceae,shrub,Dec,NA,NA,NA,30
 SALMEL,Salvia mellifera,Black sage,Lamiaceae,shrub,Dec,NA,NA,NA,28
 UMBCAL,Umbellularia californica,California bay,Lauraceae,shrub,Ever,12,NA,NA,NA
-Total,-,-,-,-,-,127,318,236,337
+Total,-,-,-,-,-,139,318,236,337
