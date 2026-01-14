@@ -32,9 +32,9 @@ df <- read_csv(here::here("data", "all-data-combined.csv")) %>%
   tissue_age %in% c(NA, NaN) ~ "both",
   TRUE ~ as.character(tissue_age)
   )) %>% 
-  filter(!(sp_site %in% c("ABICON_SEKI", 
-                          "PINJEF_SEKI", 
-                          "CALDEC_SEKI" 
+  filter(!(sp_site %in% c(#"ABICON_SEKI", 
+                          #"PINJEF_SEKI", 
+                         # "CALDEC_SEKI" 
                           #"PSEMEN_Pepperwood"
                           ))) #these act really odd, dont include
   # filter(!(sp_site %in% c("ABICON_SEKI", "PINJEF_SEKI") & tissue_age %in% c("old")))
@@ -182,6 +182,159 @@ df1 <- df %>%
 unique(df1$study)
 ```
 
+#EVT analysis
+
+Minimum seasonal MPa: 
+
+```{r}
+df1 %>% 
+  ggplot(aes(x = mwp,
+             fill = study)) +
+  geom_histogram(
+             alpha = 0.5) +
+  facet_wrap(~species, scales = "free_y")
+
+#Sample sizes: 
+
+df1 %>% 
+  mutate(year = year(date)) %>% 
+  group_by(sp_site, year) %>% 
+  summarise(count = n()) %>% 
+  arrange()
+#Pepperwood has n < 20 if grouped by year
+
+df1 %>% 
+  group_by(sp_site) %>% 
+  summarise(count = n()) %>% 
+  arrange(count)
+#Pepperwood has n < 20
+
+df1 %>% 
+  group_by(species) %>% 
+  summarise(count = n()) %>% 
+  arrange(count)
+#If we ignore site, things get better. Just aggregate to species? 
+
+df1 %>% 
+  ggplot(aes(x = mwp,
+             fill = study)) +
+  geom_histogram() +
+  facet_wrap(~species, scales = "free_y")
+
+write_csv(df1, here("temp_datasets", "evt_mpa.csv"))
+```
+
+To estimate species-specific minimum water potential (Ψmin), we used a hybrid extreme-value framework following Martínez-Vilalta et al. (2021). For each species (binning site and year to increase sample sizes), we implemented a peaks-over-threshold (POT) approach in which the upper tail of the Ψ distribution was defined using a species-specific threshold corresponding to a high quantile of the data. The threshold probability (pu) was selected adaptively to ensure adequate sampling of the tail, with pu constrained between 0.80 and 0.90 and chosen such that the expected number of exceedances above the threshold was at least 15 observations whenever possible. Exceedances above this threshold were modeled using a generalized Pareto distribution (GPD), fitted by probability-weighted moments. When the fitted GPD was well defined (positive scale parameter) and the number of exceedances met the minimum tail size criterion (≥ 10), Ψmin was estimated as the 99th percentile of the fitted POT-GPD distribution, representing an extreme but statistically estimable lower bound of water potential. For species that did not meet these criteria due to limited sample size or unstable tail fits, Ψmin was instead defined as the most negative observed water potential (Ackerly et al, 2006? check this). This hybrid approach balances statistical robustness and biological realism by using EVT-based extrapolation only where the data support it, while avoiding excessive extrapolation for sparsely sampled species.
+
+```{r}
+# ============================================================
+# Hybrid Psi-min per species:
+#   - EVT POT-GPD Psi-min when tail sample large enough
+#   - Observed minimum otherwise
+# ============================================================
+
+library(dplyr)
+library(purrr)
+library(fExtremes)
+
+# --- Load ---
+dat <- df1 %>%
+  mutate(
+    mwp = as.numeric(mwp),
+    psi_abs = abs(mwp)
+  ) %>%
+  filter(is.finite(mwp), is.finite(psi_abs), !is.na(species))
+
+# --- Settings you can tune ---
+psi_min_p <- 0.99      # extreme quantile for Psi-min (0.99 more stable than 0.999)
+min_tail  <- 10        # minimum tail points required to use EVT
+pu_max    <- 0.95      # highest threshold prob
+pu_min    <- 0.80      # lowest threshold prob (drop if needed for more tail points)
+
+# --- Vector-safe POT quantile (no qgpd arg issues) ---
+pot_quantile <- function(p, u, p_u, xi, beta) {
+  if (p <= p_u) return(NA_real_)
+  q <- (p - p_u) / (1 - p_u)
+  q <- min(max(q, 0), 0.999999)
+
+  if (!is.finite(xi) || !is.finite(beta) || beta <= 0) return(NA_real_)
+
+  # GPD exceedance quantile y
+  if (abs(xi) < 1e-12) {
+    yq <- -beta * log(1 - q)               # xi -> 0 limit
+  } else {
+    yq <- (beta/xi) * ((1 - q)^(-xi) - 1)  # general case
+  }
+  u + yq
+}
+
+# --- 1) Adaptive threshold per species to try to reach min_tail ---
+u_tbl <- dat %>%
+  count(species, name = "n") %>%
+  mutate(
+    pu = pmin(pu_max, pmax(pu_min, 1 - (min_tail / n)))
+  ) %>%
+  left_join(dat %>% select(species, psi_abs), by = "species") %>%
+  group_by(species, n, pu) %>%
+  summarise(
+    u = as.numeric(quantile(psi_abs, probs = unique(pu), na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+# --- 2) Tail extraction + EVT fit (POT-GPD) ---
+fits <- u_tbl %>%
+  left_join(dat %>% select(species, psi_abs, mwp), by = "species") %>%
+  group_by(species, n, pu, u) %>%
+  summarise(
+    x_tail = list(sort(psi_abs[psi_abs >= u])),
+    k_tail = sum(psi_abs >= u),
+    psi_min_obs = min(mwp, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    # EVT fit only if enough tail points
+    gpd_fit = map2(x_tail, u, ~{
+      x <- unlist(.x)
+      if (length(x) < min_tail) return(NULL)
+      tryCatch(
+        fExtremes::gpdFit(x, u = .y, type = "pwm"),
+        error = function(e) NULL
+      )
+    }),
+    xi = map_dbl(gpd_fit, ~ if (is.null(.x)) NA_real_ else unname(.x@fit$par.ests["xi"])),
+    beta = map_dbl(gpd_fit, ~ if (is.null(.x)) NA_real_ else unname(.x@fit$par.ests["beta"])),
+
+    psi_min_evt_abs = pmap_dbl(list(u, pu, xi, beta), ~{
+      if (any(!is.finite(c(..1, ..2, ..3, ..4))) || ..4 <= 0) return(NA_real_)
+      pot_quantile(p = psi_min_p, u = ..1, p_u = ..2, xi = ..3, beta = ..4)
+    }),
+    psi_min_evt = -psi_min_evt_abs,  # back to negative MPa
+
+    # Hybrid decision rule:
+    use_evt = is.finite(psi_min_evt) & (k_tail >= min_tail),
+    psi_min_hybrid = if_else(use_evt, psi_min_evt, psi_min_obs),
+    psi_min_method = if_else(use_evt, "EVT_POT_GPD", "Observed_min")
+  ) %>%
+  select(species, n, pu, u, k_tail, xi, beta,
+         psi_min_obs, psi_min_evt, psi_min_hybrid, psi_min_method)
+
+# --- 3) Output table ---
+print(fits %>% arrange(psi_min_method, k_tail))
+
+write.csv(fits, "psi_min_by_species_hybrid.csv", row.names = FALSE)
+
+fits %>% 
+ggplot(aes(y = psi_min_hybrid, 
+           x = psi_min_obs,
+           shape = psi_min_method,
+           color = species)) +
+  geom_point() +
+  geom_abline()
+
+```
+
+
+
 ####Table 1: (dataset summary)
 
 Table 1. Species names and characteristics and sample sizes across the four studies. Sites: PeW = Pepperwood, StR = Stunt Ranch (Pivovaroff et al. 2019), SeR = Sedgwick Reserve, PrC = Providence Creek Watershed; Dec/Ever = deciduous/evergreen; Growth form = tree or shrub. Sample sizes indicate individual observations (LFM and MPa from a single individual on a single date).
@@ -229,6 +382,11 @@ table1_df <- merge(df1, sp_info, by = c("species")) %>%
     species %in% c("CEAPAR") ~ "Parry ceanothus",
     species %in% c("HETARB") ~ "Toyon",
     species %in% c("PSEMEN") ~ "Douglas-fir",
+    
+    species %in% c("ABICON") ~ "Abies concolor",
+    species %in% c("PINJEF") ~ "Pinus Jeffreyii",
+    species %in% c("CALCED") ~ "Calocedrus decurrens",
+    
     species %in% c("QUEAGR") ~ "Live oak",
     species %in% c("QUEDOU") ~ "Blue oak",
     species %in% c("QUEDUR") ~ "Leather oak",
@@ -1134,8 +1292,11 @@ concept_params_df <- concept_both_df %>%
          minilfm = 1/minlfm, 
          intercept_lfm = 1/intercept,
          maxlfm_minwp = -1*minwp + maxlfm
-         ) 
+         )
+```
 
+
+```{r, minwpvsmaxlfm}
 #species vs. grand intercepts: 
 concept_df_wide <- concept_params_df %>% 
   rename(spp_code = species) %>% 
