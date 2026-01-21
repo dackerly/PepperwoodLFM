@@ -71,6 +71,37 @@ df %>%
   theme(legend.position = "right", 
         legend.position.inside = c(0.1, 0.8)) +
   facet_wrap(~species, scales = "free")
+
+
+df %>% 
+  filter(study == "Pepperwood") %>% 
+  ggplot(aes(y = lfm*100, x = mwp, color = tissue_age)) + 
+  geom_hline(yintercept = 70, linetype = "dotted") +
+    geom_point(alpha = .4) +
+  labs(x = "Midday Water Poential (MPa)", 
+       y = "Live Fuel Moisture (%)", 
+       color = "Study", 
+       shape = "Study") +
+  color +
+  theme(legend.position = "right", 
+        legend.position.inside = c(0.1, 0.8)) +
+  facet_wrap(~species, scales = "free")
+
+df %>% 
+  filter(study == "StuntRanch") %>% 
+  ggplot(aes(y = lfm*100, x = mwp, color = tissue_age)) + 
+  geom_hline(yintercept = 70, linetype = "dotted") +
+    geom_point(alpha = .4) +
+  labs(x = "Midday Water Poential (MPa)", 
+       y = "Live Fuel Moisture (%)", 
+       color = "Study", 
+       shape = "Study") +
+  color +
+  theme(legend.position = "right", 
+        legend.position.inside = c(0.1, 0.8)) +
+  facet_wrap(~species, scales = "free")
+
+unique(df$study)
 ```
 model and look for outliers for each site:
 
@@ -731,11 +762,13 @@ ggsave(
 
 
 #Q1: Slopes and models
+
 Intro/discussion:
+
 1) What are the aggregate and species-level relationships between leaf water potential and live fuel moisture, and how do they compare across studies? We predict that initial LFM and minimum WP will explain variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2), and that these will be largely consistent across species.  
 
 
-#####Figure SX. (linear fits)
+#####Figure SX. (linear fits, 1/lfm vs lfm)
 Linear relationship between iLFM and middays: 
 
 ```{r}
@@ -911,110 +944,7 @@ tablesx_ints_coefs
 write_csv(tablesx_ints_coefs, here("results", "figures", "tableSX_ints_coefs_conifers.csv"))
 ```
 
-#####DF with slopes and intercepts: 
 
-```{r}
-library(dplyr)
-library(broom)
-library(tidyr)
-library(purrr)
-
-# Fit the models
-mod_common_slope <- glm(ilfm ~ mwp + species, data = df1, family = gaussian)
-mod_species_interaction <- glm(ilfm ~ mwp * species, data = df1, family = gaussian)
-mod_species_study <- glm(ilfm ~ mwp * sp_site, data = df1, family = gaussian)
-
-# Helper to extract coefficients and label the model
-extract_model_info <- function(model, model_name) {
-  tidy(model) %>%
-    mutate(model = model_name)
-}
-
-# Combine all model coefficients
-model_coeffs <- bind_rows(
-  extract_model_info(mod_common_slope, "common_slope"),
-  extract_model_info(mod_species_interaction, "species_interaction"),
-  extract_model_info(mod_species_study, "species_site_interaction")
-)
-
-# Utility to get baseline level of factor variable (alphabetical if not set)
-baseline_level <- function(var) levels(factor(var))[1]
-
-# Function to compute slope and intercept per group
-compute_group_terms <- function(model, group_var, model_type) {
-  group_list <- unique(df1[[group_var]])
-  base_group <- baseline_level(df1[[group_var]])
-
-  map_dfr(group_list, function(grp) {
-    # Start with base intercept and slope
-    intercept <- coef(model)[["(Intercept)"]]
-    slope <- coef(model)[["mwp"]]
-
-    if (grp != base_group) {
-      int_term <- paste0(group_var, grp)
-      slope_term <- paste0("mwp:", group_var, grp)
-
-      if (int_term %in% names(coef(model))) {
-        intercept <- intercept + coef(model)[[int_term]]
-      }
-
-      if (slope_term %in% names(coef(model))) {
-        slope <- slope + coef(model)[[slope_term]]
-      }
-    }
-
-    tibble(
-      group = grp,
-      intercept = intercept,
-      slope = slope,
-      model = model_type
-    )
-  })
-}
-
-# Get results for each model
-coefs_common <- compute_group_terms(mod_common_slope, "species", "common_slope") %>% rename(species = group)
-
-coefs_species_int <- compute_group_terms(mod_species_interaction, "species", "species_interaction") %>% rename(species = group)
-
-coefs_species_study <- compute_group_terms(mod_species_study, "sp_site", "species_site_interaction") %>% rename(sp_study = group)%>% 
-  separate_wider_delim(sp_study, names = c("species", "study"), "_") 
-  
-
-
-# Combine into one dataframe
-coef_compare_df  <- bind_rows(coefs_common, coefs_species_int, coefs_species_study) %>% 
-  mutate(group = case_when(
-    model %in% c("species_interaction") ~ "species",
-    model %in% c("common_slope") ~ "grand",
-    model %in% c("species_site_interaction") ~ "sp_study",
-  )) %>% 
-  select(-study)
-
-range(coefs_species_int$slope)
-
-#compare:
-coef_compare_df %>% 
-  ggplot(aes(y = slope, 
-             x = intercept,
-             color = group)) +
-  geom_point(alpha = .4)
-
-
-summary(coef_compare_df
-        )
-
-concept_both_df <- merge(coef_compare_df, df1, by = c("species"), all = T) %>% 
-  filter(!(model == "species_site_interaction")) 
-concept_study_df <- merge(coef_compare_df, df1, by = c("species"), all = T) %>% 
-  filter(model == "species_site_interaction")
-
-concept_df_all <- bind_rows(concept_both_df, concept_study_df)
-
-concept_df <- concept_df_all %>% 
-  filter(group == "grand")
-
-```
 ######Bayesian forest plot: 
 ```{r}
 # ============================================================
@@ -1089,8 +1019,6 @@ slope_draws <- fit_spp_slopes %>%
     species = gsub(":mwp_z$", "", species)
   )
 
-
-
 # summarize to median + 95% credible interval
 forest_df <- slope_draws %>%
   group_by(species) %>%
@@ -1111,6 +1039,13 @@ draws_wide <- draws_long %>%
   tidyr::pivot_wider(names_from = species, values_from = slope) %>%
   arrange(.draw)
 
+draws_long <- slope_draws %>%
+  transmute(.draw, species, slope = .value)
+
+draws_wide <- draws_long %>%
+  pivot_wider(names_from = species, values_from = slope) %>%
+  arrange(.draw)
+
 # Drop .draw and FORCE numeric matrix
 slope_mat <- draws_wide %>%
   select(-.draw) %>%
@@ -1128,9 +1063,6 @@ na_counts <- colSums(is.na(slope_mat))
 summary(na_counts)
 
 
-```
-
-```{r}
 library(posterior)
 library(dplyr)
 library(tidyr)
@@ -1161,10 +1093,6 @@ new_names <- gsub(":mwp_z$", "", new_names)
 colnames(slope_df) <- new_names
 
 slope_mat <- as.matrix(slope_df)
-
-# critical checks
-stopifnot(is.numeric(slope_mat))
-colSums(is.na(slope_mat))
 ```
 
 
@@ -1248,6 +1176,37 @@ ggplot(forest_df, aes(y = species, x = slope_med, color = overlaps_grand)) +
   theme_classic(base_size = 14) + theme(legend.position = "none")
 
 ```
+```{r}
+# posterior draws of grand mean (same as you have)
+grand_draw <- rowMeans(slope_mat, na.rm = TRUE)
+
+# posterior probability each species is greater than the grand mean
+p_gt_grand <- apply(slope_mat, 2, function(x) mean(x > grand_draw, na.rm = TRUE))
+
+# two-sided probability of being different from grand (direction-agnostic)
+p_diff_grand <- 2 * pmin(p_gt_grand, 1 - p_gt_grand)
+
+# flag as "different" at 95% posterior probability (analog of p<0.05)
+diff_from_grand_95 <- p_diff_grand < 0.05
+
+forest_df <- forest_df %>%
+  mutate(
+    p_diff_grand = p_diff_grand[as.character(species)],
+    diff_from_grand_95 = diff_from_grand_95[as.character(species)]
+  )
+
+ggplot(forest_df, aes(y = species, x = slope_med, shape = diff_from_grand_95)) +
+  geom_vline(xintercept = median(grand_draw), linetype = 2, linewidth = 0.4) +
+  geom_errorbarh(aes(xmin = slope_lo, xmax = slope_hi), height = 0, linewidth = 0.6, color = "black") +
+  geom_point(size = 2.3, color = "black") +
+  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 1)) +  # filled = not different, open = different
+  labs(x = "Species slope of ilfm ~ mwp_z (posterior median ± 95% CrI)", y = NULL) +
+  theme_classic(base_size = 14) +
+  theme(legend.position = "none")
+
+```
+
+
 Color by leaf habit: 
 
 ```{r}
@@ -1460,6 +1419,9 @@ ggplot(forest_df2, aes(y = species, x = slope_med)) +
 
 #####Figure SX (differences across studies)
 ```{r, slopes}
+model <- lm(ilfm ~ mwp * sp_site, data = df2)
+summary(model)
+
 coef_sp_site_dupes <- coefs_species_study %>% 
   group_by(species) %>% 
   filter(n() >= 2)
@@ -1483,37 +1445,181 @@ interaction_results <- df2 %>%
 df_plot <- df2 %>%
   left_join(interaction_results, by = "species")
 
-figSX_studydiffs <- ggplot(df_plot, aes(x = mwp, y = ilfm, color = sp_site, group = sp_site)) +
+# 1) Build a little df with one row per facet containing the star label + position
+#    Assumes df_plot has a logical column sig_interaction per species (TRUE/FALSE)
+star_df <- df_plot %>%
+  group_by(species) %>%
+  summarise(
+    sig = any(sig_interaction, na.rm = TRUE),
+    x_pos = max(mwp, na.rm = TRUE),
+    y_pos = max(ilfm, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    star = ifelse(sig, "Sig. site effect", ""),
+    # nudge in from the upper-right corner a bit
+    x_pos = x_pos - 0.03 * (x_pos - min(df_plot$mwp, na.rm = TRUE)),
+    y_pos = y_pos - 0.03 * (y_pos - min(df_plot$ilfm, na.rm = TRUE))
+  )
+
+# 2) Plot: constant line size + add stars in upper right of each panel
+figSX_studydiffs <- ggplot(df_plot, aes(x = mwp, y = ilfm, color = study, group = sp_site)) +
   geom_point(alpha = 0.6) +
-  geom_smooth(method = "lm", se = FALSE, aes(size = sig_interaction)) +
-  scale_size_manual(values = c(`TRUE` = 1.4, `FALSE` = 0.5), guide = "none") +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 0.7) +   # all same thickness
+  geom_text(
+    data = star_df,
+    aes(x = x_pos, y = y_pos, label = star),
+    inherit.aes = FALSE,
+    hjust = 1, vjust = 1,
+    size = 3,
+    color = "black"
+  ) +
   facet_wrap(~ species, scales = "free") +
   labs(
-   # title = "Relationship between ILFM and MWP across sites by species",
-   # subtitle = "Bold lines indicate species with significant site-specific slopes (interaction p < 0.05)",
     x = "Minimum Water Potential (MPa)",
-    y = "1/LFM"
+    y = "1/LFM",
+    color = "Site"
   ) +
-  #theme_minimal() +
   theme(
     legend.position = "right",
     strip.text = element_text(face = "bold"),
     plot.title = element_text(face = "bold", size = 16)
   ) +
-  scale_color_manual(values = c("#17154f", "#2f357c", "#6c5d9e", "#9d9cd5", "#b0799a", "#f6b3b0", "#e48171", "#bf3729", "#e69b00", "#f5bb50", "#ada43b", "#355828",
-                                 "#5b859e", "#1e395f", "#75884b", "#1e5a46", "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711")) +
-  labs(color = "Species_Site")
+  theme(
+  legend.position = c(0.95, 0.05),   # lower right
+  legend.justification = c(1, 0),    # anchor legend box at its bottom-right
+  strip.text = element_text(face = "bold"),
+  plot.title = element_text(face = "bold", size = 16)
+) +
+  scale_color_manual(values  = c(
+    "Pepperwood" = "#009E73",
+    "StuntRanch" = "#E69F00",
+    "SEKI"       = "#56B4E9",
+    "Sedgwick"   = "#D55E00"
+  ))
+
 figSX_studydiffs
 
 ggsave(plot =figSX_studydiffs, 
         filename = here::here("figures", "figSX_studydiffs.jpg"), 
        dpi = 600, width = 9, height = 5)
 
-model <- lm(ilfm ~ mwp * sp_site, data = df2)
-summary(model)
+```
+#####DF with slopes and intercepts: 
+
+```{r}
+library(dplyr)
+library(broom)
+library(tidyr)
+library(purrr)
+
+# Fit the models
+mod_common_slope <- glm(ilfm ~ mwp + species, data = df1, family = gaussian)
+mod_species_interaction <- glm(ilfm ~ mwp * species, data = df1, family = gaussian)
+mod_species_study <- glm(ilfm ~ mwp * sp_site, data = df1, family = gaussian)
+
+# Helper to extract coefficients and label the model
+extract_model_info <- function(model, model_name) {
+  tidy(model) %>%
+    mutate(model = model_name)
+}
+
+# Combine all model coefficients
+model_coeffs <- bind_rows(
+  extract_model_info(mod_common_slope, "common_slope"),
+  extract_model_info(mod_species_interaction, "species_interaction"),
+  extract_model_info(mod_species_study, "species_site_interaction")
+)
+
+# Utility to get baseline level of factor variable (alphabetical if not set)
+baseline_level <- function(var) levels(factor(var))[1]
+
+# Function to compute slope and intercept per group
+compute_group_terms <- function(model, group_var, model_type) {
+  group_list <- unique(df1[[group_var]])
+  base_group <- baseline_level(df1[[group_var]])
+
+  map_dfr(group_list, function(grp) {
+    # Start with base intercept and slope
+    intercept <- coef(model)[["(Intercept)"]]
+    slope <- coef(model)[["mwp"]]
+
+    if (grp != base_group) {
+      int_term <- paste0(group_var, grp)
+      slope_term <- paste0("mwp:", group_var, grp)
+
+      if (int_term %in% names(coef(model))) {
+        intercept <- intercept + coef(model)[[int_term]]
+      }
+
+      if (slope_term %in% names(coef(model))) {
+        slope <- slope + coef(model)[[slope_term]]
+      }
+    }
+
+    tibble(
+      group = grp,
+      intercept = intercept,
+      slope = slope,
+      model = model_type
+    )
+  })
+}
+
+# Get results for each model
+coefs_common <- compute_group_terms(mod_common_slope, "species", "common_slope") %>% rename(species = group)
+
+coefs_species_int <- compute_group_terms(mod_species_interaction, "species", "species_interaction") %>% rename(species = group)
+
+coefs_species_study <- compute_group_terms(mod_species_study, "sp_site", "species_site_interaction") %>% rename(sp_study = group)%>% 
+  separate_wider_delim(sp_study, names = c("species", "study"), "_") 
+  
+
+
+# Combine into one dataframe
+coef_compare_df  <- bind_rows(coefs_common, coefs_species_int, coefs_species_study) %>% 
+  mutate(group = case_when(
+    model %in% c("species_interaction") ~ "species",
+    model %in% c("common_slope") ~ "grand",
+    model %in% c("species_site_interaction") ~ "sp_study",
+  )) %>% 
+  select(-study)
+
+range(coefs_species_int$slope)
+
+#compare:
+coef_compare_df %>% 
+  ggplot(aes(y = slope, 
+             x = intercept,
+             color = group)) +
+  geom_point(alpha = .4)
+
+
+summary(coef_compare_df
+        )
+
+concept_both_df <- merge(coef_compare_df, df1, by = c("species"), all = T) %>% 
+  filter(!(model == "species_site_interaction")) %>% 
+  merge(sp_info) %>% 
+  clean_names()
+
+concept_study_df <- merge(coef_compare_df, df1, by = c("species"), all = T) %>% 
+  filter(model == "species_site_interaction")  %>% 
+  merge(sp_info)%>% 
+  clean_names()
+
+concept_df_all <- bind_rows(concept_both_df, concept_study_df)  %>% 
+  merge(sp_info)%>% 
+  clean_names()
+
+concept_df <- concept_df_all %>% 
+  filter(group == "grand")  %>% 
+  merge(sp_info)%>% 
+  clean_names()
+
 ```
 
-
+predict with species-specific slope:
 ```{r, predict}
 # Predict water potential (mwp) for each sp_site
 df_pred <- df1 %>%
@@ -1546,7 +1652,41 @@ ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = sp_site)) +
   ) +
   theme_minimal()
 ```
+predict with species and study-specific slope:
+```{r, predict}
+# Predict water potential (mwp) for each sp_site
+df_pred <- df1 %>%
+  left_join(coefs_species_study, by = "species") %>%  # Merge coefficients, using separate slope and intercept per species
+  mutate(
+    mwp_pred = (ilfm - intercept) / slope,  # Solve for mwp using linear equation
+   # lfm_pred = 1 / ilfm,  # Transform ilfm back to lfm
+    lfm_pred = 1/(slope * mwp + intercept)  # Transform ilfm back to lfm
+  ) 
+  
+# Plot predicted vs original lfm
+ggplot(df_pred, aes(x = mwp, y = mwp_pred, color = sp_site)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +  # 1:1 reference line
+  labs(
+    x = "Original Water Potential",
+    y = "Predicted Water Potential",
+    title = "Predicted vs Original Water Potential"
+  ) +
+  theme_minimal()
 
+# Plot predicted vs original lfm
+ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = sp_site)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +  # 1:1 reference line
+  labs(
+    x = "Original LFM",
+    y = "Predicted LFM",
+    title = "Predicted vs Original LFM"
+  ) +
+  theme_minimal()
+```
+
+Predict with common slope:
 
 ```{r, predict}
 #-----------
@@ -1740,21 +1880,327 @@ ggsave(plot = fig3.1, here::here("figures", "figSX_species.jpg"), dpi = 600, hei
 ```
 
 
-####Figure S1.
-```{r, figure1}
+####Figure S1a, colored by f type
+
+```{r}
 concept_slopes_df <- concept_both_df %>%
   filter(group == "species")
-# Generate model-predicted lines for each species
-model_lines <- concept_slopes_df  %>% 
-  distinct(species, intercept, slope) %>%  # Get unique species-study combinations
-  group_by(species) %>%
-  summarise(
-    mwp = seq(min(concept_df$mwp, na.rm = TRUE), max(concept_df$mwp, na.rm = TRUE), length.out = 100), # Generate x values
-    ilfm_pred = intercept + slope * mwp,  # Compute predicted y values
-    species = unique(species),  # Retain study info for coloring
-    .groups = "drop"
+
+# Model-predicted lines per species (but we will COLOR by functional_type)
+model_lines <- concept_slopes_df %>%
+  distinct(species, intercept, slope, functional_type) %>%
+  left_join(
+    concept_slopes_df %>%
+      group_by(species) %>%
+      summarise(
+        abs_min = min(abs(mwp), na.rm = TRUE),
+        abs_max = max(abs(mwp), na.rm = TRUE),   # <-- cap at highest absolute value
+        sign_mwp = sign(stats::median(mwp, na.rm = TRUE)),
+        .groups = "drop"
+      ) %>%
+      mutate(sign_mwp = if_else(sign_mwp == 0, -1, sign_mwp)), # fallback if median==0
+    by = "species"
+  ) %>%
+  rowwise() %>%
+  mutate(abs_mwp = list(seq(abs_min, abs_max, length.out = 100))) %>%
+  tidyr::unnest(abs_mwp) %>%
+  ungroup() %>%
+  mutate(
+    mwp = sign_mwp * abs_mwp,
+    ilfm_pred = intercept + slope * mwp
+  ) 
+
+# ---- Panel A: iLFM ----
+figSXa <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = ilfm)) +
+  geom_point(aes(color = functional_type), alpha = 0.4) +
+  # 1) Angiosperm lines (drawn first, underneath)
+  geom_line(
+    data = dplyr::filter(model_lines, functional_type == "angiosperm"),
+    aes(x = -1*mwp, y = ilfm_pred, color = functional_type, group = species),
+    linewidth = 0.5
+  ) +
+  # 2) Gymnosperm lines (drawn second, on top)
+  geom_line(
+    data = dplyr::filter(model_lines, functional_type == "gymnosperm"),
+    aes(x = -1*mwp, y = ilfm_pred, color = functional_type, group = species),
+    linewidth = 0.5
+  ) +
+  labs(
+    x = "Water Potential (MWP)",
+    y = "iLFM",
+    color = "Functional type"
+  ) +
+  theme(legend.position = "none") +
+  scale_color_manual(
+  values = c(
+    "angiosperm" = "#E69F00",  # orange
+    "gymnosperm" = "#0072B2"   # blue
+  )
+)
+
+# ---- Panel B: LFM ----
+figSXb <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = lfm)) +
+  geom_point(aes(color = functional_type), alpha = 0.4) +
+  geom_line(
+    data = model_lines,
+    aes(x = -1 * mwp, y = 1 / ilfm_pred, color = functional_type, group = species),
+    linewidth = 0.5
+  ) +
+  geom_line(
+    data = dplyr::filter(model_lines, functional_type == "angiosperm"),
+    aes(x = -1*mwp, y = 1/ilfm_pred, color = functional_type, group = species),
+    linewidth = 0.5
+  ) +
+  geom_line(
+    data = dplyr::filter(model_lines, functional_type == "gymnosperm"),
+    aes(x = -1*mwp, y = 1/ilfm_pred, color = functional_type, group = species),
+    linewidth = 0.5
+  ) +
+  labs(
+    x = "Water Potential (MWP)",
+    y = "LFM",
+    color = "Functional type"
+  ) +
+  theme(legend.position = "none") +
+  scale_color_manual(
+  values = c(
+    "angiosperm" = "#E69F00",  # orange
+    "gymnosperm" = "#0072B2"   # blue
+  )
+)
+
+# ---- Legend (functional_type colors, but still one line per species) ----
+legend <- cowplot::get_legend(
+  ggplot(model_lines, aes(x = -1 * mwp, y = 1 / ilfm_pred,
+                          color = functional_type, group = species)) +
+    geom_line(linewidth = 0.6) +
+    labs(color = "Functional type") +
+    theme_minimal() +
+    scale_color_manual(
+  values = c(
+    "angiosperm" = "#E69F00",  # orange
+    "gymnosperm" = "#0072B2"   # blue
+  )
+)
+  # + your_functional_type_scale_here
+  # e.g., + scale_color_manual(values = ft_cols)
+)
+
+# Combine + save
+figSX <- cowplot::plot_grid(figSXa, figSXb, nrow = 2)
+figSX <- cowplot::plot_grid(figSX, legend, nrow = 1, rel_widths = c(1, 0.35))
+
+figSX
+
+ggsave(
+  plot = figSX,
+  filename = here::here("figures", "figSX_species_lines_colored_by_functional_type.jpg"),
+  dpi = 600, height = 4, width = 6, units = "in"
+)
+
+```
+####Figure S1a, colored by genus
+
+```{r}
+concept_slopes_df <- concept_both_df %>%
+  filter(group == "species") 
+
+model_lines <- concept_slopes_df%>%
+  distinct(species, genus, intercept, slope) %>%
+  left_join(
+    concept_slopes_df %>%
+      group_by(species) %>%
+      summarise(
+       # abs_min = min(abs(mwp), na.rm = TRUE),
+        abs_max = max(abs(mwp), na.rm = TRUE),   # <-- cap at highest absolute value
+        sign_mwp = sign(stats::median(mwp, na.rm = TRUE)),
+        .groups = "drop"
+      ) %>%
+      mutate(sign_mwp = if_else(sign_mwp == 0, -1, sign_mwp)), # fallback if median==0
+    by = "species"
+  ) %>%
+  rowwise() %>%
+  mutate(abs_mwp = list(seq(abs_min, abs_max, length.out = 100))) %>%
+  tidyr::unnest(abs_mwp) %>%
+  ungroup() %>%
+  mutate(
+    mwp = sign_mwp * abs_mwp,
+    ilfm_pred = intercept + slope * mwp
   )
 
+# ---- Panel A: iLFM ----
+figSXa <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = ilfm)) +
+  geom_point(aes(color = genus), alpha = 0.5) +
+  geom_line(
+    data = model_lines,
+    aes(x = -1 * mwp, y = ilfm_pred, color = genus, group = species),
+    linewidth = 0.5
+  ) +
+  labs(
+    x = "Water Potential (MWP)",
+    y = "iLFM",
+    color = "Genus"
+  ) +
+  theme(legend.position = "none")
+
+
+# ---- Panel B: LFM ----
+figSXb <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = lfm)) +
+  geom_point(aes(color = genus), alpha = 0.5) +
+  geom_line(
+    data = model_lines,
+    aes(x = -1 * mwp, y = 1 / ilfm_pred, color = genus, group = species),
+    linewidth = 0.5
+  ) +
+  labs(
+    x = "Water Potential (MWP)",
+    y = "LFM",
+    color = "Genus"
+  ) +
+  theme(legend.position = "none")
+
+
+# ---- Legend (functional_type colors, but still one line per species) ----
+legend <- cowplot::get_legend(
+  ggplot(model_lines,
+         aes(x = -1 * mwp, y = 1 / ilfm_pred,
+             color = genus, group = species)) +
+    geom_line(linewidth = 0.6) +
+    labs(color = "Genus") +
+    theme_minimal()
+  # + scale_color_manual(values = genus_cols)  # if you have one
+)
+
+
+# Combine + save
+figSX <- cowplot::plot_grid(figSXa, figSXb, nrow = 2)
+figSX <- cowplot::plot_grid(figSX, legend, nrow = 1, rel_widths = c(1, 0.35))
+
+figSX
+
+ggsave(
+  plot = figSX,
+  filename = here::here("figures", "figSX_species_lines_colored_by_genus.jpg"),
+  dpi = 600, height = 4, width = 6, units = "in"
+)
+
+```
+####Figure S1a, colored by family
+
+```{r}
+concept_slopes_df <- concept_both_df %>%
+  filter(group == "species") 
+
+model_lines <- concept_slopes_df %>%
+  distinct(species, family, intercept, slope)  %>%
+  left_join(
+    concept_slopes_df %>%
+      group_by(species) %>%
+      summarise(
+        abs_min = min(abs(mwp), na.rm = TRUE),
+        abs_max = max(abs(mwp), na.rm = TRUE),   # <-- cap at highest absolute value
+        sign_mwp = sign(stats::median(mwp, na.rm = TRUE)),
+        .groups = "drop"
+      ) %>%
+      mutate(sign_mwp = if_else(sign_mwp == 0, -1, sign_mwp)), # fallback if median==0
+    by = "species"
+  ) %>%
+  rowwise() %>%
+  mutate(abs_mwp = list(seq(abs_min, abs_max, length.out = 100))) %>%
+  tidyr::unnest(abs_mwp) %>%
+  ungroup() %>%
+  mutate(
+    mwp = sign_mwp * abs_mwp,
+    ilfm_pred = intercept + slope * mwp
+  ) 
+
+# ---- Panel A: iLFM ----
+figSXa <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = ilfm)) +
+  geom_point(aes(color = family), alpha = 0.5) +
+  geom_line(
+    data = model_lines,
+    aes(x = -1 * mwp, y = ilfm_pred, color = family, group = species),
+    linewidth = 0.5
+  ) +
+  labs(
+    x = "Water Potential (MWP)",
+    y = "iLFM",
+    color = "family"
+  ) +
+  theme(legend.position = "none")
+
+
+# ---- Panel B: LFM ----
+figSXb <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = lfm)) +
+  geom_point(aes(color = family), alpha = 0.5) +
+  geom_line(
+    data = model_lines,
+    aes(x = -1 * mwp, y = 1 / ilfm_pred, color = family, group = species),
+    linewidth = 0.5
+  ) +
+  labs(
+    x = "Water Potential (MWP)",
+    y = "LFM",
+    color = "family"
+  ) +
+  theme(legend.position = "none")
+
+
+# ---- Legend (functional_type colors, but still one line per species) ----
+legend <- cowplot::get_legend(
+  ggplot(model_lines,
+         aes(x = -1 * mwp, y = 1 / ilfm_pred,
+             color = family, group = species)) +
+    geom_line(linewidth = 0.6) +
+    labs(color = "family") +
+    theme_minimal()
+  # + scale_color_manual(values = family_cols)  # if you have one
+)
+
+
+# Combine + save
+figSX <- cowplot::plot_grid(figSXa, figSXb, nrow = 2)
+figSX <- cowplot::plot_grid(figSX, legend, nrow = 1, rel_widths = c(1, 0.35))
+
+figSX
+
+ggsave(
+  plot = figSX,
+  filename = here::here("figures", "figSX_species_lines_colored_by_family.jpg"),
+  dpi = 600, height = 4, width = 6, units = "in"
+)
+
+```
+
+####Figure S1., colored by species
+```{r, figure1}
+concept_slopes_df <- concept_both_df %>%
+  filter(group == "species") 
+
+# Generate model-predicted lines for each species
+model_lines <- concept_slopes_df  %>% 
+  merge(table1_df)%>% 
+  distinct(species, intercept, slope, family)  %>%
+  left_join(
+    concept_slopes_df %>%
+      group_by(species) %>%
+      summarise(
+        abs_min = min(abs(mwp), na.rm = TRUE),
+        abs_max = max(abs(mwp), na.rm = TRUE),   # <-- cap at highest absolute value
+        sign_mwp = sign(stats::median(mwp, na.rm = TRUE)),
+        .groups = "drop"
+      ) %>%
+      mutate(sign_mwp = if_else(sign_mwp == 0, -1, sign_mwp)), # fallback if median==0
+    by = "species"
+  ) %>%
+  rowwise() %>%
+  mutate(abs_mwp = list(seq(abs_min, abs_max, length.out = 100))) %>%
+  tidyr::unnest(abs_mwp) %>%
+  ungroup() %>%
+  mutate(
+    mwp = sign_mwp * abs_mwp,
+    ilfm_pred = intercept + slope * mwp
+  ) 
 
 # Scatter plot of ilfm vs mwp with model lines
 figSXa <- ggplot(concept_slopes_df , aes(x = -1*mwp, y = ilfm)) +
@@ -1784,6 +2230,7 @@ figSXb <- ggplot(concept_slopes_df , aes(x = -1*mwp, y = lfm)) +
   color_species + 
   theme(legend.position = "false")
 
+
 # Extract legend
 legend <- cowplot::get_legend(
   ggplot(concept_df %>%
@@ -1799,7 +2246,93 @@ figSX
 figSX <- cowplot::plot_grid(figSX, legend, nrow = 1, rel_widths = c(1, 0.5))
 figSX
 
-ggsave(plot = figSX, here::here("figures", "figSX_species_int.jpg"), dpi = 600, height = 4, width = 6, units = "in")
+ggsave(plot = figSX, here::here("figures", "figSX_fgroup_sppint.jpg"), dpi = 600, height = 4, width = 6, units = "in")
+```
+
+###Figure S1., colored by study
+```{r, figure1}
+concept_slopes_df <- concept_both_df %>%
+  filter(group == "species") 
+
+model_lines <- concept_slopes_df %>%
+  distinct(species, study, intercept, slope)  %>%
+  left_join(
+    concept_slopes_df %>%
+      group_by(species) %>%
+      summarise(
+        abs_min = min(abs(mwp), na.rm = TRUE),
+        abs_max = max(abs(mwp), na.rm = TRUE),   # <-- cap at highest absolute value
+        sign_mwp = sign(stats::median(mwp, na.rm = TRUE)),
+        .groups = "drop"
+      ) %>%
+      mutate(sign_mwp = if_else(sign_mwp == 0, -1, sign_mwp)), # fallback if median==0
+    by = "species"
+  ) %>%
+  rowwise() %>%
+  mutate(abs_mwp = list(seq(abs_min, abs_max, length.out = 100))) %>%
+  tidyr::unnest(abs_mwp) %>%
+  ungroup() %>%
+  mutate(
+    mwp = sign_mwp * abs_mwp,
+    ilfm_pred = intercept + slope * mwp
+  ) 
+
+# ---- Panel A: iLFM ----
+figSXa <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = ilfm)) +
+  geom_point(aes(color = study), alpha = 0.5) +
+  geom_line(
+    data = model_lines,
+    aes(x = -1 * mwp, y = ilfm_pred, color = study, group = species),
+    linewidth = 0.5
+  ) +
+  labs(
+    x = "Water Potential (MWP)",
+    y = "iLFM",
+    color = "study"
+  ) +
+  theme(legend.position = "none")
+
+
+# ---- Panel B: LFM ----
+figSXb <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = lfm)) +
+  geom_point(aes(color = study), alpha = 0.5) +
+  geom_line(
+    data = model_lines,
+    aes(x = -1 * mwp, y = 1 / ilfm_pred, color = study, group = species),
+    linewidth = 0.5
+  ) +
+  labs(
+    x = "Water Potential (MWP)",
+    y = "LFM",
+    color = "study"
+  ) +
+  theme(legend.position = "none")
+
+
+# ---- Legend (functional_type colors, but still one line per species) ----
+legend <- cowplot::get_legend(
+  ggplot(model_lines,
+         aes(x = -1 * mwp, y = 1 / ilfm_pred,
+             color = study, group = species)) +
+    geom_line(linewidth = 0.6) +
+    labs(color = "study") +
+    theme_minimal()
+  # + scale_color_manual(values = study_cols)  # if you have one
+)
+
+
+# Combine + save
+figSX <- cowplot::plot_grid(figSXa, figSXb, nrow = 2)
+figSX <- cowplot::plot_grid(figSX, legend, nrow = 1, rel_widths = c(1, 0.35))
+
+figSX
+
+ggsave(
+  plot = figSX,
+  filename = here::here("figures", "figSX_species_lines_colored_by_study.jpg"),
+  dpi = 600, height = 4, width = 6, units = "in"
+)
+
 ```
 
 #Q2: 
@@ -1817,7 +2350,9 @@ concept_params_df <- concept_both_df %>%
          minilfm = 1/minlfm, 
          intercept_lfm = 1/intercept,
          maxlfm_minwp = -1*minwp + maxlfm
-         )
+         ) %>% 
+  merge(sp_info) %>% 
+  clean_names()
 ```
 
 
@@ -1830,7 +2365,9 @@ concept_df_wide <- concept_params_df %>%
   pivot_wider(names_from = group, values_from = intercept, names_repair = "unique")
 
 concept_df_wide %>% 
-ggplot(aes(x = grand, y = species, color = spp_code)) +
+ggplot(aes(x = grand, 
+           y = species, 
+           color = spp_code)) +
   geom_abline() +
   geom_point()
 
@@ -1848,7 +2385,8 @@ For species-interaction model, are there sig relationships?
 
 ```{r}
 params_test_df <- concept_params_df %>% 
-  select(species, intercept, intercept_lfm, slope, minlfm, minwp, minilfm, group, maxlfm, maxwp) %>% 
+  select(species, intercept, intercept_lfm, slope, minlfm, minwp, minilfm, group, maxlfm, maxwp, 
+         genus, functional_type) %>% 
   unique()
 
 fig4a <- params_test_df %>% 
@@ -1996,7 +2534,10 @@ make_lm_plot <- function(df, xvar, yvar, xlab, ylab, eq_x = NULL, eq_y = NULL, e
   if (is.null(eq_x)) eq_x <- min(df[[xvar]], na.rm = TRUE)
   if (is.null(eq_y)) eq_y <- max(df[[yvar]], na.rm = TRUE)
 
-  ggplot(df, aes_string(x = xvar, y = yvar, color = "species")) +
+  ggplot(df, aes_string(x = xvar, 
+                        y = yvar, 
+                       # shape = "functional type",
+                        color = "species")) +
     geom_point(size = 2) +
     geom_smooth(method = "lm", se = FALSE, color = eq_col) +
     annotate("text", x = eq_x, y = eq_y, label = eqn, hjust = 0, vjust = 1,
@@ -2079,6 +2620,118 @@ ggsave(plot =plots_fig4a_final,
 
 ```
 
+
+
+Chat rewrite to get same y axis: 
+
+```{r}
+#### Figure 4a (param correlations): significant ones, y = Minimum LFM (shared across panels)
+
+color_species <- scale_color_manual(values = c(
+  "#17154f", "#2f357c", "#6c5d9e", "#9d9cd5", "#b0799a", "#f6b3b0", "#e48171", "#bf3729",
+  "#e69b00", "#f5bb50", "#ada43b", "#355828", "#5b859e", "#1e395f", "#75884b", "#1e5a46",
+  "#df8d71", "#af4f2f", "#d48f90", "#732f30", "#ab84a5", "#59385c", "#d8b847", "#b38711", "darkgreen"
+))
+
+make_lm_plot <- function(df, xvar, yvar, xlab, ylab,
+                         eq_x = NULL, eq_y = NULL, eq_col = "black") {
+
+  model <- lm(reformulate(xvar, yvar), data = df)
+  eqn <- paste0(
+    "y = ", round(coef(model)[2], 3), "x + ", round(coef(model)[1], 3),
+    "\nR² = ", round(summary(model)$r.squared, 3),
+    "\np = ", signif(summary(model)$coefficients[2, 4], 3)
+  )
+
+  # defaults: upper-left-ish in data space
+  if (is.null(eq_x)) eq_x <- min(df[[xvar]], na.rm = TRUE)
+  if (is.null(eq_y)) eq_y <- max(df[[yvar]], na.rm = TRUE)
+
+ ggplot(df, aes(
+  x = .data[[xvar]],
+  y = .data[[yvar]]*100,
+  color = species
+)) +
+
+    geom_point(size = 2, aes(shape = functional_type)) +
+    geom_smooth(method = "lm", se = FALSE, color = eq_col) +
+    annotate(
+      "text", x = eq_x, y = eq_y, label = eqn,
+      hjust = 0, vjust = 1, size = 3.5,
+      color = eq_col, fontface = "italic"
+    ) +
+    color_species +
+   scale_shape_manual(
+  values = c(
+    "angiosperm" = 16,  # filled circle
+    "gymnosperm" = 17   # filled triangle
+  )
+) +
+    labs(x = xlab, y = ylab, color = "Species", shape = "Functional Type") +
+    theme(legend.position = "right") +
+   theme(
+  legend.text  = element_text(size = 8),
+  legend.title = element_text(size = 9),
+  legend.key.size = unit(0.5, "lines")
+)
+}
+
+library(dplyr)
+library(cowplot)
+
+df_plot <- params_test_df %>% filter(group == "species")
+
+# Shared y-limits across both panels (Minimum LFM)
+ylims_minlfm <- range(df_plot$minlfm*100, na.rm = TRUE)
+
+# --- Panel A: Minimum LFM vs Minimum WP ---
+fig4f_yminlfm <- make_lm_plot(
+  df_plot,
+  xvar = "minwp",
+  yvar = "minlfm",
+  xlab = "Minimum WP (MPa)",
+  ylab = "Minimum LFM (%)"
+) +
+  coord_cartesian(ylim = ylims_minlfm)
+
+# --- Panel B: Minimum LFM vs Model Slope ---
+fig4g_yminlfm <- make_lm_plot(
+  df_plot,
+  xvar = "slope",
+  yvar = "minlfm",
+  xlab = "Model Slope",
+  ylab = "Minimum LFM (%)"
+) +
+  coord_cartesian(ylim = ylims_minlfm)
+
+# Legend (same as before)
+legend <- get_legend(
+  fig4f_yminlfm + theme(legend.box.margin = margin(0, 0, 5, 0))
+)
+
+# Combine with shared y scale + single y-axis labeling
+plots_fig4a <- plot_grid(
+  fig4f_yminlfm +
+    theme(legend.position = "none"),
+  fig4g_yminlfm +
+    theme(legend.position = "none") +
+    theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()),
+  nrow = 1,
+  labels = LETTERS[1:2],
+  align = "v",
+  axis = "l"
+)
+
+plots_fig4a_final <- plot_grid(plots_fig4a, legend, rel_widths = c(1, .25), nrow = 1)
+plots_fig4a_final
+
+ggsave(
+  plot = plots_fig4a_final,
+  filename = here::here("figures", "fig4a.jpg"),
+  dpi = 600, width = 9, height = 3.5
+)
+
+```
 
 ####Figure 4. (isocline)
 
@@ -2639,6 +3292,401 @@ par(op)
 dev.off()
 
 ```
+
+
+####Label just some: 
+
+```{r}
+library(dplyr)
+library(here)
+
+# ----------------------------
+# Build spres from parameters
+# ----------------------------
+spres <- concept_params_df %>% 
+  filter(group == "grand") %>% 
+  mutate(
+    model1.int = intercept,
+    model1.slp = slope,
+    SpCode6    = species, 
+    minWP      = minwp
+  )
+
+# ----------------------------
+# Join Genus info (optional; not required for species-colored points)
+# ----------------------------
+spres <- spres %>%
+  left_join(SpCodes %>% select(SpCode6, Genus), by = "SpCode6")
+
+if (any(is.na(spres$Genus))) {
+  warning("Some SpCode6 have no Genus in SpCodes.")
+}
+
+# ----------------------------
+# Generate conceptual curves
+# ----------------------------
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
+
+# Use a "typical" slope for drawing the conceptual lines
+species_slope <- median(spres$model1.slp, na.rm = TRUE)
+
+# Base y scale (percent)
+lfm_pct <- (1 / ilfm.sat.vec) * 100
+
+# Helper to make curve for a given LFM threshold
+make_MWPcrit <- function(thresh, ilfm_vec, slope) {
+  out <- numeric(length(ilfm_vec))
+  for (i in seq_along(ilfm_vec)) {
+    out[i] <- solveForX(c(ilfm_vec[i], slope), 1 / thresh)
+  }
+  out
+}
+
+MWPcrit_60 <- make_MWPcrit(0.62, ilfm.sat.vec, species_slope)
+MWPcrit_77 <- make_MWPcrit(0.77, ilfm.sat.vec, species_slope)
+
+# ----------------------------
+# Colors by Species (you already have this object)
+# ----------------------------
+# IMPORTANT: color_species is a ggplot2 scale.
+# For base R, we need a named vector of colors that matches species levels.
+species_levels <- sort(unique(spres$SpCode6))
+species_cols <- setNames(
+  rep(color_species$palette(length(species_levels)), length.out = length(species_levels)),
+  species_levels
+)
+
+# ----------------------------
+# Plot open
+# ----------------------------
+jpeg(
+  filename = here::here("figures", "Fig2_species.jpg"),
+  width    = 7,   
+  height   = 4.5,     
+  units    = "in",
+  res      = 300
+)
+
+op <- par(no.readonly = TRUE)
+par(mar = c(4, 4, 0.5, 4), mgp = c(2.2, 0.6, 0), xpd = TRUE)
+
+# ----------------------------
+# Set up plot (axes only)
+# ----------------------------
+plot(
+  x = MWPcrit_60, y = lfm_pct,
+  xlim = c(-8, 0.1), ylim = c(0, 400),
+  type = "n",
+  xlab = "Minimum Midday Water Potential (MPa)",
+  ylab = "LFM (%) @ Midday Water Potential = 0",
+  yaxt = "n"
+)
+axis(2, at = seq(0, 400, 100), labels = seq(0, 400, 100), las = 1)
+
+# ----------------------------
+# Draw conceptual curves
+# ----------------------------
+lines(MWPcrit_60, lfm_pct, lwd = 1.5, col = "maroon")
+text(tail(MWPcrit_60, 1), tail(lfm_pct, 1), labels = "60% LFM",
+     pos = 1, col = "maroon", cex = 0.9)
+
+lines(MWPcrit_77, lfm_pct, lwd = 1.5, col = "goldenrod")
+text(tail(MWPcrit_77, 1), tail(lfm_pct, 1), labels = "77% LFM",
+     pos = 3, col = "goldenrod", cex = 0.9)
+
+# ----------------------------
+# Plot points (COLORED BY SPECIES, not letters)
+# ----------------------------
+points(
+  x = spres$minWP,
+  y = (1 / spres$model1.int) * 100,
+  pch = 16,
+  cex = 1.1,
+  col = species_cols[spres$SpCode6]
+)
+
+# ----------------------------
+# Add small labels for selected species
+# ----------------------------
+# ----------------------------
+# Add small labels for selected species
+#   - ensure 1 label per species
+#   - special placement for PIJE / PINJEF (above point, centered)
+# ----------------------------
+label_spp <- c("PSEMEN", "UMBCAL", "ABCO", "PIJE", "PINJEF", "ABICON", "MALLAU", "CEACOR", "QUEKEL", "ARBMEN", "CALDEC")
+special  <- c("PIJE", "PINJEF", "CALDEC", "QUEKEL", "CEACOR")
+
+spres_lab <- spres %>%
+  filter(SpCode6 %in% label_spp) %>%
+  mutate(
+    x = minWP,
+    y = (1 / model1.int) * 100
+  ) %>%
+  group_by(SpCode6) %>%
+  slice(1) %>%              # <-- prevents duplicate labels if species appears multiple times
+  ungroup()
+
+# All labels EXCEPT the special one(s): to the right
+spres_lab_other <- spres_lab %>% filter(!SpCode6 %in% special)
+
+text(
+  x = spres_lab_other$x,
+  y = spres_lab_other$y,
+  labels = spres_lab_other$SpCode6,
+  pos = 4,
+  offset = 0.3,
+  cex = 0.75,
+  col = species_cols[spres_lab_other$SpCode6]
+)
+
+# Special label (PIJE / PINJEF): above point, centered
+spres_lab_special <- spres_lab %>% filter(SpCode6 %in% special)
+
+if (nrow(spres_lab_special) > 0) {
+  text(
+    x = spres_lab_special$x,
+    y = spres_lab_special$y,
+    labels = spres_lab_special$SpCode6,
+    pos = 3,
+    offset = 0.45,
+    adj = c(0.5, 0),   # center horizontally
+    cex = 0.75,
+    col = species_cols[spres_lab_special$SpCode6]
+  )
+}
+# ----------------------------
+# Optional: legend for species colors (can be big if many species)
+# ----------------------------
+# ----------------------------
+# Move species legend ~1 inch to the RIGHT
+# ----------------------------
+usr <- par("usr")   # c(xmin, xmax, ymin, ymax)
+pin <- par("pin")   # plot dimensions in inches
+
+# Convert 1 inch to x-axis units
+x_per_inch <- diff(usr[1:2]) / pin[1]
+x_shift    <- .025 * x_per_inch   # 1 inch to the right
+
+legend(
+  x = usr[2] + x_shift,        # push legend right by ~1 inch
+  y = usr[4],                  # align with top of plot
+  xjust = 0, yjust = 1,
+  legend = species_levels,
+  pch = 16,
+  col = species_cols[species_levels],
+  bty = "n",
+  cex = 0.7,
+  title = "Species"
+)
+
+par(op)
+dev.off()
+```
+#Dynamic groups: 
+```{r}
+
+library(dplyr)
+library(here)
+
+# ============================================================
+# CHOOSE WHAT TO COLOR BY (one place to change)
+#   examples: "SpCode6", "Genus", "Family", "functional_type", etc.
+# ============================================================
+color_by <- "functional_type"
+
+# Optional: where to pull classification columns from (set to NULL if already in spres)
+# Must include SpCode6 + any columns you want to color by (Genus/Family/functional_type/etc.)
+tax_table <- SpCodes
+
+# ----------------------------
+# Build spres from parameters
+# ----------------------------
+spres <- concept_params_df %>% 
+  filter(group == "grand") %>% 
+  mutate(
+    model1.int = intercept,
+    model1.slp = slope,
+    SpCode6    = species, 
+    minWP      = minwp
+  )
+
+# ----------------------------
+# Join taxonomy / grouping columns (if needed)
+# ----------------------------
+if (!is.null(tax_table)) {
+  spres <- spres %>%
+    left_join(tax_table, by = "SpCode6")
+}
+
+# sanity check: does color_by exist?
+if (!color_by %in% names(spres)) {
+  stop(paste0("`color_by` = '", color_by, "' is not a column in `spres` after joins."))
+}
+
+# ----------------------------
+# Generate conceptual curves
+# ----------------------------
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
+species_slope <- median(spres$model1.slp, na.rm = TRUE)
+lfm_pct <- (1 / ilfm.sat.vec) * 100
+
+make_MWPcrit <- function(thresh, ilfm_vec, slope) {
+  out <- numeric(length(ilfm_vec))
+  for (i in seq_along(ilfm_vec)) {
+    out[i] <- solveForX(c(ilfm_vec[i], slope), 1 / thresh)
+  }
+  out
+}
+
+MWPcrit_60 <- make_MWPcrit(0.62, ilfm.sat.vec, species_slope)
+MWPcrit_77 <- make_MWPcrit(0.77, ilfm.sat.vec, species_slope)
+
+# ----------------------------
+# Build colors for chosen grouping variable
+# ----------------------------
+# Grab the grouping values (as character) so they index cleanly
+spres <- spres %>%
+  mutate(color_group = as.character(.data[[color_by]]))
+
+group_levels <- sort(unique(spres$color_group))
+group_levels <- group_levels[!is.na(group_levels)]  # drop NA from legend keys
+
+# Base palette (Okabe–Ito-ish, expanded if needed)
+okabe_ito <- c(
+  "#17154f", "#5b859e", "#6c5d9e", "#9d9cd5", "#732f30",
+  "#f6b3b0", "#e48171", "#bf3729", "#e69b00", "#ab84a5",
+  "#355828", "#ada43b", "#1e395f", "#75884b", "#df8d71",
+  "#af4f2f", "#d48f90", "#59385c", "#d8b847", "#b38711", "pink"
+)
+
+group_colors <- if (length(group_levels) > length(okabe_ito)) {
+  grDevices::colorRampPalette(okabe_ito)(length(group_levels))
+} else {
+  okabe_ito[seq_len(length(group_levels))]
+}
+group_cols <- setNames(group_colors, group_levels)
+
+# ----------------------------
+# Plot open
+# ----------------------------
+jpeg(
+  filename = here::here("figures", paste0("Fig2_colored_by_", color_by, ".jpg")),
+  width    = 7,
+  height   = 4.5,
+  units    = "in",
+  res      = 300
+)
+
+op <- par(no.readonly = TRUE)
+par(mar = c(4, 4, 0.5, 4), mgp = c(2.2, 0.6, 0), xpd = TRUE)
+
+# ----------------------------
+# Set up plot (axes only)
+# ----------------------------
+plot(
+  x = MWPcrit_60, y = lfm_pct,
+  xlim = c(-8, 0.1), ylim = c(0, 400),
+  type = "n",
+  xlab = "Minimum Midday Water Potential (MPa)",
+  ylab = "LFM (%) @ Midday Water Potential = 0",
+  yaxt = "n"
+)
+axis(2, at = seq(0, 400, 100), labels = seq(0, 400, 100), las = 1)
+
+# ----------------------------
+# Draw conceptual curves
+# ----------------------------
+lines(MWPcrit_60, lfm_pct, lwd = 1.5, col = "maroon")
+text(tail(MWPcrit_60, 1), tail(lfm_pct, 1), labels = "60% LFM",
+     pos = 1, col = "maroon", cex = 0.9)
+
+lines(MWPcrit_77, lfm_pct, lwd = 1.5, col = "goldenrod")
+text(tail(MWPcrit_77, 1), tail(lfm_pct, 1), labels = "77% LFM",
+     pos = 3, col = "goldenrod", cex = 0.9)
+
+# ----------------------------
+# Plot points (colored by chosen grouping column)
+# ----------------------------
+points(
+  x = spres$minWP,
+  y = (1 / spres$model1.int) * 100,
+  pch = 16,
+  cex = 1.1,
+  col = group_cols[spres$color_group]
+)
+
+# ----------------------------
+# Add small labels for selected species (labels always by SpCode6)
+#   - ensure 1 label per species
+#   - special placement for PIJE / PINJEF (above point, centered)
+#   - label color matches the chosen color_by mapping
+# ----------------------------
+label_spp <- c("PSEMEN", "UMBCAL", "ABCO", "PIJE", "PINJEF", "ABICON", "CALDEC")
+special   <- c("PIJE", "PINJEF", "CALDEC")
+
+spres_lab <- spres %>%
+  filter(SpCode6 %in% label_spp) %>%
+  mutate(
+    x = minWP,
+    y = (1 / model1.int) * 100
+  ) %>%
+  group_by(SpCode6) %>%
+  slice(1) %>%
+  ungroup()
+
+spres_lab_other <- spres_lab %>% filter(!SpCode6 %in% special)
+
+text(
+  x = spres_lab_other$x,
+  y = spres_lab_other$y,
+  labels = spres_lab_other$SpCode6,
+  pos = 4,
+  offset = 0.3,
+  cex = 0.75,
+  col = group_cols[spres_lab_other$color_group]
+)
+
+spres_lab_special <- spres_lab %>% filter(SpCode6 %in% special)
+
+if (nrow(spres_lab_special) > 0) {
+  text(
+    x = spres_lab_special$x,
+    y = spres_lab_special$y,
+    labels = spres_lab_special$SpCode6,
+    pos = 3,
+    offset = 0.45,
+    adj = c(0.5, 0),
+    cex = 0.75,
+    col = group_cols[spres_lab_special$color_group]
+  )
+}
+
+# ----------------------------
+# Legend (for chosen color_by groups)
+#   moved slightly right
+# ----------------------------
+usr <- par("usr")
+pin <- par("pin")
+x_per_inch <- diff(usr[1:2]) / pin[1]
+x_shift    <- 0.025 * x_per_inch
+
+legend(
+  x = usr[2] + x_shift,
+  y = usr[4],
+  xjust = 0, yjust = 1,
+  legend = group_levels,
+  pch = 16,
+  col = group_cols[group_levels],
+  bty = "n",
+  cex = 0.7,
+  title = color_by
+)
+
+par(op)
+dev.off()
+
+```
+
 
 ####Figure 4, (family)
 ```{r}
@@ -3345,7 +4393,10 @@ Set up plotting and data:
 ```{r, warning = F}
 #read in trait df.
 #Data is mean from TRY, 
-traits_df <- read_csv(here("data", "traits_rd_20250327.csv"))
+traits_df <- read_csv(here("data", "traits_rd_20250327.csv")) %>% 
+  mutate(swc_g_calc = 1 - ldmc, #If ldmc is g(SW)/g(DW), then 1 - g(SW)/g(DW) = water component. 
+         sla_calc = 1/lma
+         ) 
 ```
 
 
@@ -3370,10 +4421,10 @@ q3_df1 <- merge(traits_df, concept_params_df, by = ("species"), all = T) %>%
 
 ```{r, warning = F}
 pds_q3_df_raw <- read_csv(here('data', 'all-data-combined-predawns.csv')) %>% 
-  clean_names() %>% 
-  filter(!(species %in% c("PINJEF", "ABICON", "CALDEC")))
+  clean_names() 
 
 pds_q3_df_raw %>% 
+  filter(time %in% c("pd")) %>% 
   ggplot(aes(y = wp, x = lfm, color = species, shape = study)) +
   geom_point()
 ```

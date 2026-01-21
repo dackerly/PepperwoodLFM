@@ -59,16 +59,50 @@ try$OrigValueStr[which(try$SpeciesName=='Quercus berberidifolia' & try$OriglName
 
 #This is the data we actually use, which is a combination of the following: 
 #1) David's trait data (here("data", "species-traits.csv)), not sure where it is made/written or written. Seems to be the data above? 
-# 2) I (Indra) added in SEKI data and looked online to find other traits, which are now in the "species-traits-withseki.csv". Compiled in Excell. 
-traits_df <- read_csv(here("data", "species-traits-withseki.csv")) %>% 
-  clean_names() %>% 
-  mutate(species = sp_code) %>% 
- # filter(sla < 20) %>% 
-  mutate(psi_tlp = case_when(
-    psi_tlp %in% c(NA) & species %in% c("QUEDOU") ~ -3.4,
-    TRUE ~ as.numeric(psi_tlp)))
 
 SpCodes <- read_csv(here("data", "SpCodes.csv"))
+
+###-----------------
+# summarize try trait data for all species, 20241014
+try_all <- read.csv(here('data', 'try_all_20241014.csv')) %>% 
+  select(SpeciesName, OriglName, StdValue) %>% 
+  filter(OriglName %in% c("P50", "P88", "LDMC",  "Pmin predawn (Mpa)", "Pmin midday (Mpa)", 
+                          "SLA (cm2 g-1)", "Water potential at 50% loss of conductivity Psi_50 (MPa)",
+                          "P50 (MPa)", "P88 (MPa)", "SLA", "LMA (g/m2)"
+  )) %>% 
+  mutate(trait_name = case_when(
+    OriglName %in% c("P50", "Water potential at 50% loss of conductivity Psi_50 (MPa)", "P50 (MPa)") ~ "P50",
+    OriglName %in% c("P88", "P88 (MPa)") ~ "P88",
+    OriglName %in% c("SLA (cm2 g-1)", "SLA") ~ "SLA (cm2 g-1)",
+    TRUE ~ OriglName
+  )) %>% 
+  select(-OriglName) %>% 
+  distinct() %>% 
+  mutate(SpeciesName = str_replace_all(SpeciesName, "_", " "),
+         Genus_species = stringr::word(SpeciesName, 1, 2)) %>% 
+#try_means <- try_all  %>% 
+  group_by(Genus_species, trait_name) %>% 
+  mutate(tsd = sd(StdValue, na.rm = T),
+         tmn = mean(StdValue, na.rm = T)) %>% 
+  select(-StdValue) %>% 
+  distinct() %>% 
+# tmn_all_wide <- tmn_all %>% 
+  pivot_wider(names_from = c(trait_name),
+              values_from = c(tmn, tsd)) %>% 
+  merge(SpCodes %>% select(SpCode6, Genus_species)) %>% 
+  select(-SpeciesName) %>%
+  rename_with(~ str_remove(., "tmn_")) %>% 
+  group_by(Genus_species, SpCode6) %>% 
+  fill(c(2:15),.direction = "downup") %>% 
+  distinct()
+#We used this to fill in what was missing in the species-traits-withseki.csv
+
+
+# 2) I (Indra) added in SEKI data and looked online to find other traits, which are now in the "species-traits-withseki.csv". Compiled in Excel. 
+traits_compiled_df <- read_csv(here("data", "species-traits-withseki.csv")) %>% 
+  clean_names() %>% 
+  mutate(species = sp_code)
+
 
 #Add rooting depth info from here:https://www.groundwaterresourcehub.org/where-we-work/california/plant-rooting-depth-database/
 rd_df <- read_csv(here("data", "other_studies", "Plant_Rooting_Depth_Database_20210525_update_sheet2.csv")) %>% 
@@ -103,19 +137,20 @@ rd_df <- read_csv(here("data", "other_studies", "Plant_Rooting_Depth_Database_20
     TRUE ~ as.numeric(max_rooting_depth_m)
   )) %>% 
   select(-min_or_max) %>% 
-  distinct()
+  distinct() %>% 
+  ungroup()
   
-  unique(rd_df$max_rooting_depth_m)
+unique(rd_df$max_rooting_depth_m)
   
-  traits_rd_df <- merge(rd_df, traits_df, by = c("sp_code"), all.y = T) %>% 
-    select(-dr_max_rooting_depth) %>% #old attempt to manually find rooting deptha
-    filter(!(sp_code %in% c("ABICON", "PINJEF", "CALDEC")))  
+traits_rd_df <- merge(rd_df, traits_compiled_df, by = c("sp_code"), all.y = T) %>% 
+    select(-dr_max_rooting_depth) 
                     
 write_csv(traits_rd_df, here("data", "traits_rd_20250327.csv"))
 
 
 
 #### ----- 
+
 
 #Older data, not sure this is used?
 ###-----------------
@@ -158,48 +193,4 @@ tsd_seki <- read.csv(here('data', 'try_seki_traits_2.csv')) %>%
   select(-StdValue) %>% 
   distinct()
 
-###-----------------
-# summarize try trait data for all, 20241014
-try_all <- read.csv(here('data', 'try_all_20241014.csv')) %>% 
-  select(SpeciesName, OriglName, StdValue) %>% 
-  filter(OriglName %in% c("P50", "P88", "LDMC",  "Pmin predawn (Mpa)", "Pmin midday (Mpa)", 
-                          "SLA (cm2 g-1)", "Water potential at 50% loss of conductivity Psi_50 (MPa)",
-                          "P50 (MPa)", "P88 (MPa)", "SLA", "LMA (g/m2)"
-  )) %>% 
-  mutate(trait_name = case_when(
-    OriglName %in% c("P50", "Water potential at 50% loss of conductivity Psi_50 (MPa)", "P50 (MPa)") ~ "P50",
-    OriglName %in% c("P88", "P88 (MPa)") ~ "P88",
-    OriglName %in% c("SLA (cm2 g-1)", "SLA") ~ "SLA (cm2 g-1)",
-    TRUE ~ OriglName
-  )) %>% 
-  select(-OriglName) %>% 
-  distinct()
-
-tmn_all <- try_all %>% 
-  #filter(SpeciesName %in% c("Ceanothus megacarpus")) %>% 
-  group_by(SpeciesName, trait_name) %>% 
-  mutate(tmn = mean(StdValue, na.rm = T)) %>% 
-  select(-StdValue) %>% 
-  distinct()
-
-tsd_all <- try_all %>% 
-  group_by(SpeciesName, trait_name) %>% 
-  mutate(tsd = sd(StdValue, na.rm = T)) %>% 
-  select(-StdValue) %>% 
-  distinct()
-
-
-tmn_all_wide <- tmn_all %>% 
-  pivot_wider(names_from = c(trait_name),
-              values_from = c(tmn))
-
-#-----
-
-unique(try$SpeciesName)
-unique(try_all$SpeciesName)
-
-unique(try$SpeciesName)
-unique(try_all$SpeciesName)
-
-#-----
 
