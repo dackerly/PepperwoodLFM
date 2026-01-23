@@ -1,0 +1,26 @@
+species,functional_type,growth_form,SpCode6,SpCode4,Genus,Species,Genus_species,Pepperwood.spp,SEKI.spp,SoCal.spp,Sedgwick.spp,family,sp_code,dec_ever
+ABICON,gymnosperm,tree,ABICON,ABCO,Abies,concolor,Abies concolor,NA,A. concolor,NA,NA,Pinaceae,ABICON,Ever
+ADEFAS,angiosperm,shrub,ADEFAS,ADFA,Adenostoma,fasciculatum,Adenostoma fasciculatum,ADEFAS,NA,ADFA,NA,Rosaceae,ADEFAS,Ever
+ARBMEN,angiosperm,tree,ARBMEN,ARME,Arbutus,menziesii,Arbutus menziesii,ARBMEN,NA,NA,NA,Ericaceae,ARBMEN,Ever
+ARCGLA,angiosperm,shrub,ARCGLA,ARGL,Arctostaphylos,glandulosa,Arctostaphylos glandulosa,NA,NA,ARGL,NA,Ericaceae,ARCGLA,Ever
+ARCPAT,angiosperm,shrub,ARCPAT,ARPA,Arctostaphylos,patula,Arctostaphylos patula,NA,A. patula,NA,NA,Ericaceae,ARCPAT,Ever
+CALDEC,gymnosperm,tree,CALDEC,CADE,Calocedrus,decurrens,Calocedrus decurrens,NA,C. decurrens,NA,NA,Cupressaceae,CALDEC,Ever
+CEACOR,angiosperm,shrub,CEACOR,CECO,Ceanothus,cordulatus,Ceanothus cordulatus,NA,C. cordulatus,NA,NA,Rhamnaceae,CEACOR,Ever
+CEACUN,angiosperm,shrub,CEACUN,CECU,Ceanothus,cuneatus,Ceanothus cuneatus,CEACUN,NA,NA,NA,Rhamnaceae,CEACUN,Ever
+CEAPAR,angiosperm,shrub,CEAPAR,CEPA,Ceanothus,parryi,Ceanothus parryi,CEAPAR,NA,NA,NA,Rhamnaceae,CEAPAR,Ever
+CEASPI,angiosperm,shrub,CEASPI,CESP,Ceanothus,spinosus,Ceanothus spinosus,NA,NA,CESP,NA,Rhamnaceae,CEASPI,Ever
+CERBET,angiosperm,tree/shrub,CERBET,CEBE,Cercocarpus,betuloides,Cercocarpus betuloides,NA,NA,CEBE,NA,Rosaceae,CERBET,Ever
+ERIFAS,angiosperm,shrub,ERIFAS,ERFA,Eriogonum,fasciculatum,Eriogonum fasciculatum,NA,NA,ERFA,NA,Polygonaceae,ERIFAS,Semi-Dec
+HETARB,angiosperm,shrub,HETARB,HEAR,Heteromeles,arbutifolia,Heteromeles arbutifolia,HETARB,NA,HEAR,NA,Rosaceae,HETARB,Ever
+MALLAU,angiosperm,shrub,MALLAU,MALA,Malosma,laurina,Malosma laurina,NA,NA,MALA,NA,Anacardiaceae,MALLAU,Ever
+PINJEF,gymnosperm,tree,PINJEF,PIJE,Pinus,jeffreyi,Pinus jeffreyi,NA,P. jeffreyi,NA,NA,Pinaceae,PINJEF,Ever
+PSEMEN,gymnosperm,tree,PSEMEN,PSME,Pseudotsuga,menziesii,Pseudotsuga menziesii,PSEMEN,NA,NA,NA,Pinaceae,PSEMEN,Ever
+QUEAGR,angiosperm,tree,QUEAGR,QUAG,Quercus,agrifolia,Quercus agrifolia,QUEAGR,NA,QUAG,live oak,Fagaceae,QUEAGR,Ever
+QUEBER,angiosperm,tree,QUEBER,QUBE,Quercus,berberidifolia,Quercus berberidifolia,NA,NA,QUBE,NA,Fagaceae,QUEBER,Ever
+QUEDOU,angiosperm,tree,QUEDOU,QUDO,Quercus,douglasii,Quercus douglasii,QUEDOU,NA,NA,blue oak,Fagaceae,QUEDOU,Dec
+QUEDUR,angiosperm,tree,QUEDUR,QUDU,Quercus,durata,Quercus durata,QUEDUR,NA,NA,NA,Fagaceae,QUEDUR,Ever
+QUEGAR,angiosperm,tree,QUEGAR,QUGA,Quercus,garryana,Quercus garryana,QUEGAR,NA,NA,NA,Fagaceae,QUEGAR,Dec
+QUEKEL,angiosperm,tree,QUEKEL,QUKE,Quercus,kelloggii,Quercus kelloggii,QUEKEL,Q. kelloggii,NA,NA,Fagaceae,QUEKEL,Dec
+SALLEU,angiosperm,shrub,SALLEU,SALE,Salvia,leucophylla,Salvia leucophylla,NA,NA,SALE,NA,Lamiaceae,SALLEU,Dec
+SALMEL,angiosperm,shrub,SALMEL,SAME,Salvia,mellifera,Salvia mellifera,NA,NA,SAME,NA,Lamiaceae,SALMEL,Dec
+UMBCAL,angiosperm,shrub,UMBCAL,UMCA,Umbellularia,californica,Umbellularia californica,UMBCAL,NA,NA,NA,Lauraceae,UMBCAL,Ever
