@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+source(here('scripts', 'lfm_functions.R'))
 ```
 
 Question: Across species, what are the contributions of initial LFM and minimum WP in explaining variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2)? 
@@ -28,6 +29,8 @@ color_species <- scale_color_manual(
     CEAPAR = "#b38711",
     CEASPI = "#e48171",
     CERBET = "#d8b847",
+    
+    CEACOR = "#f6b3b0",
     
     ERIFAS = "#bf3729",
     HETARB = "#e69b00",
@@ -287,10 +290,7 @@ ggsave(plot =plots_figsx_param_corrs_final,
        dpi = 600, width = 12, height = 10)
 
 #Save only the significant ones:
-```
 
-
-```{r}
 plots_fig4a <- plot_grid(
   #fig4a + theme(legend.position = "none"),
   #fig4b + theme(legend.position = "none"),
@@ -422,6 +422,263 @@ ggsave(
 
 ```
 
+###Fugure SI X: model parameter correlations: 
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(here)
+
+# ============================
+# Compare model parameters only
+#   - makes a params × params correlation heatmap
+#   - runs once per dataset (with/without salvias)
+# ============================
+
+# ----------------------------
+# Pick vars (model params only)
+# ----------------------------
+model_params <- c("minlfm", "maxlfm", "intercept_lfm", "slope", "minwp")
+
+# ----------------------------
+# Nice labels (edit however you want)
+# ----------------------------
+nice_names <- c(
+  minlfm       = "LFMmin",
+  maxlfm       = "LFMmax",
+  intercept_lfm = "Intercept (LFM)",
+  slope         = "Slope",
+  minwp        = "Min Ψmd"
+)
+
+# ----------------------------
+# Helper: pairwise cor.test p-values (handles NAs per pair)
+# ----------------------------
+pairwise_cor_p <- function(df, vars, method = "pearson") {
+  pairs <- t(combn(vars, 2))
+  out <- tibble(
+    x = pairs[, 1],
+    y = pairs[, 2]
+  ) %>%
+    rowwise() %>%
+    mutate(
+      n = sum(is.finite(df[[x]]) & is.finite(df[[y]])),
+      test = list({
+        xx <- df[[x]]
+        yy <- df[[y]]
+        ok <- is.finite(xx) & is.finite(yy)
+        if (sum(ok) < 3) return(NULL)
+        suppressWarnings(cor.test(xx[ok], yy[ok], method = method))
+      }),
+      r = if (is.null(test)) NA_real_ else unname(test$estimate),
+      p = if (is.null(test)) NA_real_ else test$p.value
+    ) %>%
+    ungroup()
+
+  # mirror to full matrix (x,y) and (y,x), plus diagonal
+  diag_df <- tibble(x = vars, y = vars, n = NA_integer_, r = 1, p = NA_real_)
+  bind_rows(
+    out,
+    out %>% transmute(x = y, y = x, n = n, r = r, p = p),
+    diag_df
+  )
+}
+
+# ----------------------------
+# Make one plot function so you don't repeat code
+# ----------------------------
+plot_param_cor <- function(dat, outfile, method = "pearson") {
+
+  plot_df <- dat %>%
+    select(all_of(model_params)) %>%
+    mutate(across(everything(), as.numeric)) %>%
+    { pairwise_cor_p(., vars = model_params, method = method) } %>%
+    mutate(
+      x_lab = nice_names[x],
+      y_lab = nice_names[y],
+      stars = case_when(
+        is.na(p) ~ "",
+        p < 0.001 ~ "***",
+        p < 0.01  ~ "**",
+        p < 0.05  ~ "*",
+        TRUE ~ ""
+      ),
+      label = case_when(
+        x == y ~ "r=1",
+        is.na(p) ~ "NA",
+        TRUE ~ paste0("r=", round(r, 2), "\n",
+                      "p=", format.pval(p, digits = 2, eps = 1e-3), "\n", stars)
+      )
+    ) %>%
+    mutate(
+      x_lab = factor(x_lab, levels = nice_names[model_params]),
+      # keep same ordering on y, but reverse so first param is top row
+      y_lab = factor(y_lab, levels = rev(nice_names[model_params]))
+    )
+
+  p <- ggplot(plot_df, aes(x = x_lab, y = y_lab, fill = r)) +
+    geom_tile(color = "white", linewidth = 0.4) +
+    geom_text(aes(label = label), size = 3, lineheight = 0.9) +
+    scale_fill_gradient2(
+      low = "#2c2c2c", mid = "white", high = "#b22222",
+      limits = c(-1, 1), oob = squish, name = "Pearson r"
+    ) +
+    labs(x = NULL, y = NULL) +
+    theme(
+      panel.grid = element_blank(),
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+      legend.key.height = unit(1.2, "lines")
+    )
+
+  ggsave(
+    filename = outfile,
+    plot = p,
+    width = 5.5,
+    height = 5,
+    units = "in"
+  )
+
+  p
+}
+
+# ----------------------------
+# Run it: with salvias
+# ----------------------------
+p_params_with <- plot_param_cor(
+  dat = df_plot,
+  outfile = here("figures", "modelparams_correlation_with_salvias.jpeg")
+)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(here)
+library(GGally)
+
+# ----------------------------
+# Pick vars (model params only)
+# ----------------------------
+model_params <- c("minlfm", "maxlfm", "intercept_lfm", "slope", "minwp")
+
+# ----------------------------
+# Nice labels
+# ----------------------------
+nice_names <- c(
+  minlfm        = "LFMmin",
+  maxlfm        = "LFMmax",
+  intercept_lfm = "Intercept (LFM)",
+  slope         = "Slope",
+  minwp         = "Min Ψmd"
+)
+
+# ----------------------------
+# One plot: ggpairs
+#   - lower: correlation tiles (with r and p)
+#   - upper: scatterplots
+# ----------------------------
+plot_param_pairs <- function(dat, outfile, method = "pearson") {
+
+  method_use <- method  # capture once to avoid recursive default arg issues
+
+  dat_use <- dat %>%
+    select(all_of(model_params)) %>%
+    mutate(across(everything(), as.numeric)) %>%
+    rename_with(~ nice_names[.x], all_of(model_params))  # prettier labels
+
+  # ---- lower triangle: correlation tile ----
+  cor_tile <- function(data, mapping, ...) {
+    x <- GGally::eval_data_col(data, mapping$x)
+    y <- GGally::eval_data_col(data, mapping$y)
+
+    ok <- is.finite(x) & is.finite(y)
+    if (sum(ok) < 3) {
+      return(
+        ggplot() +
+          theme_void() +
+          annotate("text", x = 0.5, y = 0.5, label = "NA")
+      )
+    }
+
+    ct <- suppressWarnings(cor.test(x[ok], y[ok], method = method_use))
+    r  <- unname(ct$estimate)
+    p  <- ct$p.value
+
+    stars <- dplyr::case_when(
+      p < 0.001 ~ "***",
+      p < 0.01  ~ "**",
+      p < 0.05  ~ "*",
+      TRUE ~ ""
+    )
+
+    label <- paste0(
+      "r=", round(r, 2), "\n",
+      "p=", format.pval(p, digits = 2, eps = 1e-3), "\n", stars
+    )
+
+    ggplot() +
+      geom_tile(aes(x = 1, y = 1, fill = r), color = "white", linewidth = 0.4) +
+      geom_text(aes(x = 1, y = 1, label = label), size = 3, lineheight = 0.9) +
+      scale_fill_gradient2(
+        low = "#2c2c2c", mid = "white", high = "#b22222",
+        limits = c(-1, 1), oob = squish
+      ) +
+      theme_void() +
+      theme(legend.position = "none")
+  }
+
+  # ---- upper triangle: scatter ----
+  scat_panel <- function(data, mapping, ...) {
+    ggplot(data = data, mapping = mapping) +
+      geom_point(alpha = 0.7, size = 1) +
+      theme(
+        panel.grid = element_blank(),
+        axis.title = element_blank()
+      )
+  }
+
+  # ---- diagonal: density (or swap to points if you prefer) ----
+  diag_density <- function(data, mapping, ...) {
+    ggplot(data = data, mapping = mapping) +
+      geom_density(linewidth = 0.6, adjust = 1.2) +
+      theme(
+        panel.grid = element_blank(),
+        axis.title = element_blank()
+      )
+  }
+
+  g <- GGally::ggpairs(
+    dat_use,
+    upper = list(continuous = scat_panel),
+    lower = list(continuous = cor_tile),
+    diag  = list(continuous = diag_density)
+  ) +
+    theme(
+      panel.grid = element_blank(),
+      strip.text = element_text(size = 10),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "right"
+    )
+
+  ggsave(outfile, g, width = 7.5, height = 7.5, units = "in")
+  g
+}
+
+# ----------------------------
+# Run once
+# ----------------------------
+p_params <- plot_param_pairs(
+  dat = df_plot,
+  outfile = here("figures", "modelparams_pairs_scatter_corr.jpeg")
+)
+
+```
+
+
 ####Figure 4. (isocline)
 
 Using common slope for all species: 
@@ -550,6 +807,7 @@ color_species = c(
     UMBCAL = "#d8b847"
   )
 
+species_cols <- color_species #so it works with isocline 
 # Ensure we have enough colors for all unique species
 color_species <- setNames(color_species[1:length(unique_species)], unique_species)
 
@@ -856,203 +1114,105 @@ dev.off()
  
 ```
 
-With genus in legend: 
-
-```{r, eval = F}
-# ----------------------------
-# Plot open: 
-# ----------------------------
-
-jpeg(
-  filename = here::here("figures", "Fig2_genus.jpg"),
-  width    = 7,
-  height   = 4.5,
-  units    = "in",
-  res      = 300
-)
-
-op <- par(no.readonly = TRUE)
-# Keep margins normal; we'll put both legends *inside* the plot area
-par(mar = c(4, 4, 0.5, 0.5), mgp = c(2.2, 0.6, 0), xpd = FALSE)
-
-# ----------------------------
-# Colors by Genus
-# ----------------------------
-okabe_ito <- c(
-  "#17154f", "#5b859e", "#6c5d9e", "#9d9cd5", "#732f30",
-  "#f6b3b0", "#e48171", "#bf3729", "#e69b00", "#ab84a5",
-  "#355828", "#ada43b", "#5b859e", "#1e395f", "#75884b",
-  "#df8d71", "#af4f2f", "#d48f90", "#59385c", "#d8b847",
-  "#b38711"
-)
-
-genus_levels <- sort(unique(spres$Genus))
-ng <- length(genus_levels)
-genus_colors <- if (ng > length(okabe_ito)) {
-  grDevices::colorRampPalette(okabe_ito)(ng)
-} else {
-  okabe_ito[seq_len(ng)]
-}
-genus_cols <- setNames(genus_colors, genus_levels)
-
-# ----------------------------
-# Base curve at 70% (reference), multiplied by 100
-# ----------------------------
-MWPcrit <- numeric(length(ilfm.sat.vec))
-for (i in seq_along(ilfm.sat.vec)) {
-  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.7)
-}
-lfm_pct <- (1 / ilfm.sat.vec) * 100
-
-plot(
-  MWPcrit, lfm_pct,
-  xlim = c(-8, 0.1), ylim = c(0, 400),
-  type = "n",  # set up axes, no line yet
-  xlab = "Minimum Minimum Water Potential (MPa)",
-  ylab = "LFM (%) @ Midday Water Potential = 0",
-  yaxt = "n"
-)
-axis(2, at = seq(0, 400, 100), labels = seq(0, 400, 100), las = 1)
-
-# --- 60% LFM curve
-for (i in seq_along(ilfm.sat.vec)) {
-  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.62)
-}
-lines(MWPcrit, lfm_pct, lwd = 1.5, col = "maroon")
-text(tail(MWPcrit, 1), tail(lfm_pct, 1),
-     labels = "60% LFM", pos = 1, col = "maroon", cex = 0.9)
-
-# --- 77% LFM curve
-for (i in seq_along(ilfm.sat.vec)) {
-  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.77)
-}
-lines(MWPcrit, lfm_pct, lwd = 1.5, col = "goldenrod")
-text(tail(MWPcrit, 1), tail(lfm_pct, 1),
-     labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.9)
-
-# ----------------------------
-# Assign unique letters per species
-# ----------------------------
-unique_species  <- unique(spres$SpCode6)
-species_letters <- setNames(letters[seq_along(unique_species)], unique_species)
-spres$Letter    <- species_letters[spres$SpCode6]
-
-# ----------------------------
-# Plot species letters colored by Genus
-# ----------------------------
-text(
-  x = spres$minWP,
-  y = (1 / spres$model1.int) * 100,
-  labels = spres$Letter,
-  col = genus_cols[spres$Genus],
-  cex = 1
-)
-
-# ----------------------------
-# Build legend data
-# ----------------------------
-legend_df <- data.frame(
-  Letter  = spres$Letter,
-  Species = spres$SpCode6,
-  Genus   = spres$Genus
-) %>% distinct()
-
-letter_text   <- paste0(legend_df$Letter, " - ", legend_df$Species)
-letter_colors <- genus_cols[legend_df$Genus]
-
-# ----------------------------
-# Place legends INSIDE plot, side-by-side
-# ----------------------------
-usr   <- par("usr")
-x_min <- usr[1]; x_max <- usr[2]
-y_min <- usr[3]; y_max <- usr[4]
-
-x_range <- x_max - x_min
-y_range <- y_max - y_min
-
-# y position slightly below top
-y_top <- y_max - 0.05 * y_range
-
-# letter legend towards upper-right, but not all the way
-x_letter <- x_min + 0.55 * x_range
-# genus legend further right
-x_genus  <- x_min + 0.83 * x_range
-
-# 1) Letter–Species legend
-legend(
-  x      = x_letter,
-  y      = y_top,
-  xjust  = 0, yjust = 1,
-  legend = letter_text,
-  text.col = letter_colors,
-  pch    = 15,
-  col    = letter_colors,
-  bty    = "n",
-  cex    = 0.75,
-  y.intersp = 0.9,
-  title  = "Species (letters)"
-)
-
-# 2) Genus legend just to the right
-legend(
-  x      = x_genus,
-  y      = y_top,
-  xjust  = 0, yjust = 1,
-  legend = genus_levels,
-  pch    = 15,
-  col    = genus_cols[genus_levels],
-  bty    = "n",
-  cex    = 0.75,
-  y.intersp = 0.9,
-  title  = "Genus"
-)
-
-par(op)
-dev.off()
-
-```
-
-
 ####Label just some: 
 
+#HERE
 ```{r}
+# ============================
+# Conceptual curves + species points (base R)
+#   - builds spres from concept_params_df
+#   - joins Genus from SpCodes
+#   - draws conceptual isoclines + species points colored by species
+#   - labels selected species (1 label per species)
+#   - writes a JPEG to /figures
+# ============================
+
 library(dplyr)
 library(here)
 
 # ----------------------------
+# Required helper (you said you already have this)
+# ----------------------------
+# solveForX <- function(cs, yval = 0.7) {
+#   # y = m*x + b
+#   return((yval - cs[1]) / cs[2])
+# }
+
+# ----------------------------
+# Species color palette (named vector)
+#   NOTE: make sure CEACOR is included
+# ----------------------------
+color_species <- c(
+  ABICON = "#17154f",
+  ADEFAS = "#2f357c",
+  ARBMEN = "#6c5d9e",
+  ARCGLA = "#9d9cd5",
+  ARCPAT = "#b0799a",
+  CALDEC = "#59385c",
+  CEACOR = "#f6b3b0",  # <- added (was missing)
+  CEACUN = "#f6b3b0",
+  CEAPAR = "#b38711",
+  CEASPI = "#e48171",
+  CERBET = "#d8b847",
+  ERIFAS = "#bf3729",
+  HETARB = "#e69b00",
+  MALLAU = "#f5bb50",
+  PINJEF = "#ada43b",
+  PSEMEN = "#355828",
+  QUEAGR = "#5b859e",
+  QUEBER = "#1e395f",
+  QUEDOU = "#75884b",
+  QUEDUR = "#1e5a46",
+  QUEGAR = "#df8d71",
+  QUEKEL = "#af4f2f",
+  SALLEU = "#d48f90",
+  SALMEL = "#732f30",
+  UMBCAL = "#d8b847"
+)
+
+# ----------------------------
 # Build spres from parameters
 # ----------------------------
-spres <- concept_params_df %>% 
-  filter(group == "grand") %>% 
+spres <- concept_params_df %>%
+  filter(group == "grand") %>%
   mutate(
     model1.int = intercept,
     model1.slp = slope,
-    SpCode6    = species, 
+    SpCode6    = species,
     minWP      = minwp
-  )
-
-# ----------------------------
-# Join Genus info (optional; not required for species-colored points)
-# ----------------------------
-spres <- spres %>%
+  ) %>%
   left_join(SpCodes %>% select(SpCode6, Genus), by = "SpCode6")
 
 if (any(is.na(spres$Genus))) {
-  warning("Some SpCode6 have no Genus in SpCodes.")
+  warning("Some SpCode6 have no Genus in SpCodes: ",
+          paste(unique(spres$SpCode6[is.na(spres$Genus)]), collapse = ", "))
 }
+
+# ----------------------------
+# Species colors aligned to data
+# ----------------------------
+species_levels <- sort(unique(spres$SpCode6))
+
+species_cols <- color_species[species_levels]
+missing_spp <- species_levels[is.na(species_cols)]
+if (length(missing_spp) > 0) {
+  warning("Missing species in color_species (will be grey50): ",
+          paste(missing_spp, collapse = ", "))
+  species_cols[is.na(species_cols)] <- "grey50"
+}
+names(species_cols) <- species_levels
 
 # ----------------------------
 # Generate conceptual curves
 # ----------------------------
 ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
 
-# Use a "typical" slope for drawing the conceptual lines
+# "Typical" slope for conceptual lines
 species_slope <- median(spres$model1.slp, na.rm = TRUE)
 
-# Base y scale (percent)
+# Base y scale: LFM (%) corresponding to ilfm values
 lfm_pct <- (1 / ilfm.sat.vec) * 100
 
-# Helper to make curve for a given LFM threshold
 make_MWPcrit <- function(thresh, ilfm_vec, slope) {
   out <- numeric(length(ilfm_vec))
   for (i in seq_along(ilfm_vec)) {
@@ -1065,29 +1225,18 @@ MWPcrit_60 <- make_MWPcrit(0.62, ilfm.sat.vec, species_slope)
 MWPcrit_77 <- make_MWPcrit(0.77, ilfm.sat.vec, species_slope)
 
 # ----------------------------
-# Colors by Species (you already have this object)
-# ----------------------------
-# IMPORTANT: color_species is a ggplot2 scale.
-# For base R, we need a named vector of colors that matches species levels.
-species_levels <- sort(unique(spres$SpCode6))
-species_cols <- setNames(
-  rep(color_species$palette(length(species_levels)), length.out = length(species_levels)),
-  species_levels
-)
-
-# ----------------------------
 # Plot open
 # ----------------------------
 jpeg(
-  filename = here::here("figures", "Fig2_species.jpg"),
-  width    = 7,   
-  height   = 4.5,     
-  units    = "in",
-  res      = 300
+  filename = here("figures", "Fig2_species.jpg"),
+  width = 7,
+  height = 4.5,
+  units = "in",
+  res = 300
 )
 
 op <- par(no.readonly = TRUE)
-par(mar = c(4, 4, 0.5, 4), mgp = c(2.2, 0.6, 0), xpd = TRUE)
+par(mar = c(4, 4, 0.5, 7), mgp = c(2.2, 0.6, 0), xpd = TRUE)
 
 # ----------------------------
 # Set up plot (axes only)
@@ -1106,15 +1255,15 @@ axis(2, at = seq(0, 400, 100), labels = seq(0, 400, 100), las = 1)
 # Draw conceptual curves
 # ----------------------------
 lines(MWPcrit_60, lfm_pct, lwd = 1.5, col = "maroon")
-text(tail(MWPcrit_60, 1), tail(lfm_pct, 1), labels = "60% LFM",
-     pos = 1, col = "maroon", cex = 0.9)
+text(tail(MWPcrit_60, 1), tail(lfm_pct, 1),
+     labels = "62% LFM", pos = 1, col = "maroon", cex = 0.9)
 
 lines(MWPcrit_77, lfm_pct, lwd = 1.5, col = "goldenrod")
-text(tail(MWPcrit_77, 1), tail(lfm_pct, 1), labels = "77% LFM",
-     pos = 3, col = "goldenrod", cex = 0.9)
+text(tail(MWPcrit_77, 1), tail(lfm_pct, 1),
+     labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.9)
 
 # ----------------------------
-# Plot points (COLORED BY SPECIES, not letters)
+# Plot points (colored by species)
 # ----------------------------
 points(
   x = spres$minWP,
@@ -1125,15 +1274,12 @@ points(
 )
 
 # ----------------------------
-# Add small labels for selected species
+# Labels for selected species (one label per species)
 # ----------------------------
-# ----------------------------
-# Add small labels for selected species
-#   - ensure 1 label per species
-#   - special placement for PIJE / PINJEF (above point, centered)
-# ----------------------------
-label_spp <- c("PSEMEN", "UMBCAL", "ABCO", "PIJE", "PINJEF", "ABICON", "MALLAU", "CEACOR", "QUEKEL", "ARBMEN", "CALDEC")
-special  <- c("PIJE", "PINJEF", "CALDEC", "QUEKEL", "CEACOR")
+label_spp <- c("PSEMEN", "UMBCAL", "ABCO", "PIJE", "PINJEF", "ABICON",
+               "MALLAU", "CEACOR", "QUEKEL", "ARBMEN", "CALDEC")
+
+special <- c("PIJE", "PINJEF", "CALDEC", "QUEKEL", "CEACOR")
 
 spres_lab <- spres %>%
   filter(SpCode6 %in% label_spp) %>%
@@ -1142,25 +1288,25 @@ spres_lab <- spres %>%
     y = (1 / model1.int) * 100
   ) %>%
   group_by(SpCode6) %>%
-  slice(1) %>%              # <-- prevents duplicate labels if species appears multiple times
+  slice(1) %>%
   ungroup()
 
-# All labels EXCEPT the special one(s): to the right
+# right-side labels
 spres_lab_other <- spres_lab %>% filter(!SpCode6 %in% special)
+if (nrow(spres_lab_other) > 0) {
+  text(
+    x = spres_lab_other$x,
+    y = spres_lab_other$y,
+    labels = spres_lab_other$SpCode6,
+    pos = 4,
+    offset = 0.3,
+    cex = 0.75,
+    col = species_cols[spres_lab_other$SpCode6]
+  )
+}
 
-text(
-  x = spres_lab_other$x,
-  y = spres_lab_other$y,
-  labels = spres_lab_other$SpCode6,
-  pos = 4,
-  offset = 0.3,
-  cex = 0.75,
-  col = species_cols[spres_lab_other$SpCode6]
-)
-
-# Special label (PIJE / PINJEF): above point, centered
+# special labels above point
 spres_lab_special <- spres_lab %>% filter(SpCode6 %in% special)
-
 if (nrow(spres_lab_special) > 0) {
   text(
     x = spres_lab_special$x,
@@ -1168,28 +1314,24 @@ if (nrow(spres_lab_special) > 0) {
     labels = spres_lab_special$SpCode6,
     pos = 3,
     offset = 0.45,
-    adj = c(0.5, 0),   # center horizontally
+    adj = c(0.5, 0),
     cex = 0.75,
     col = species_cols[spres_lab_special$SpCode6]
   )
 }
+
 # ----------------------------
-# Optional: legend for species colors (can be big if many species)
-# ----------------------------
-# ----------------------------
-# Move species legend ~1 inch to the RIGHT
+# Legend (to the right)
 # ----------------------------
 usr <- par("usr")   # c(xmin, xmax, ymin, ymax)
 pin <- par("pin")   # plot dimensions in inches
-
-# Convert 1 inch to x-axis units
 x_per_inch <- diff(usr[1:2]) / pin[1]
-x_shift    <- .025 * x_per_inch   # 1 inch to the right
+x_shift <- 0.9 * x_per_inch  # ~0.9 inch to the right
 
 legend(
-  x = usr[2] + x_shift,        # push legend right by ~1 inch
-  y = usr[4],                  # align with top of plot
-  xjust = 0, yjust = 1,
+  x = usr[2] + x_shift,
+  y = usr[4],
+  xjust = 1, yjust = 1,
   legend = species_levels,
   pch = 16,
   col = species_cols[species_levels],
@@ -1200,7 +1342,10 @@ legend(
 
 par(op)
 dev.off()
+
 ```
+
+
 #Dynamic groups: 
 ```{r}
 
@@ -1436,9 +1581,9 @@ spres$Letter     <- species_letters[spres$SpCode6]
 # Join FAMILY info (from sp_info)
 #   - sp_info must contain: SpCode6, family  (lowercase)
 # ----------------------------
-spres <- spres %>%
-  left_join(sp_info %>% select(sp_code, family) %>% 
-              mutate(SpCode6 = sp_code), by = "SpCode6")
+# spres <- spres %>%
+#   left_join(sp_info %>% select(sp_code, family) %>% 
+#               mutate(SpCode6 = sp_code), by = "SpCode6")
 
 # Optional check for any species missing a Family
 if (any(is.na(spres$family))) {
@@ -1607,9 +1752,9 @@ spres$Letter     <- species_letters[spres$SpCode6]
 # Join FAMILY info (from sp_info)
 #   - sp_info must contain: SpCode6, family  (lowercase)
 # ----------------------------
-spres <- spres %>%
-  left_join(sp_info %>% select(sp_code, growth_form) %>% 
-              mutate(SpCode6 = sp_code), by = "SpCode6")
+# spres <- spres %>%
+#   left_join(sp_info %>% select(sp_code, growth_form) %>% 
+#               mutate(SpCode6 = sp_code), by = "SpCode6")
 
 # Optional check for any species missing a Family
 if (any(is.na(spres$family))) {
@@ -1778,9 +1923,9 @@ spres$Letter     <- species_letters[spres$SpCode6]
 # Join FAMILY info (from sp_info)
 #   - sp_info must contain: SpCode6, family  (lowercase)
 # ----------------------------
-spres <- spres %>%
-  left_join(sp_info %>% select(sp_code, dec_ever) %>% 
-              mutate(SpCode6 = sp_code), by = "SpCode6")
+# spres <- spres %>%
+#   left_join(sp_info %>% select(sp_code, dec_ever) %>% 
+#               mutate(SpCode6 = sp_code), by = "SpCode6")
 
 # Optional check for any species missing a Family
 if (any(is.na(spres$dec_ever))) {
@@ -2104,6 +2249,10 @@ letter_mapping <- data.frame(
 )
 ```
 
+#--------
+#DONT NEED BELOW? 
+
+
 #Q3: trait correlations
 
 Question: How strongly are the species parameters associated with critical plant traits related to drought tolerance and access to water: Leaf Dry Matter Content (LDMC), water potential at 50% loss of conductivity (Ψ50), osmotic potential at turgor loss point (πTLP), and rooting depth?.
@@ -2139,44 +2288,6 @@ q3_df1 <- merge(traits_df, concept_params_df, #by = c("species", "sp_code", "gro
 
 ####Figure 5.* (P50 x model parameters)
 ```{r}
-# --- keep your color scale + data splits exactly as-is ---
-color_species <- scale_color_manual(
-  values = c(
-    ABICON = "#17154f",
-    ADEFAS = "#2f357c",
-    ARBMEN = "#6c5d9e",
-
-    ARCGLA = "#9d9cd5",
-    ARCPAT = "#b0799a",
-    CALDEC = "#59385c",
-    CEACUN = "#f6b3b0",
-
-    CEAPAR = "#b38711",
-    CEASPI = "#e48171",
-    CERBET = "#d8b847",
-
-    ERIFAS = "#bf3729",
-    HETARB = "#e69b00",
-
-    MALLAU = "#f5bb50",
-    PINJEF = "#ada43b",
-    PSEMEN = "#355828",
-
-    QUEAGR = "#5b859e",
-    QUEBER = "#1e395f",
-    QUEDOU = "#75884b",
-
-    QUEDUR = "#1e5a46",
-    QUEGAR = "#df8d71",
-    QUEKEL = "#af4f2f",
-
-    SALLEU = "#d48f90",
-    SALMEL = "#732f30",
-    UMBCAL = "#d8b847"
-  ),
-  drop = FALSE
-)
-
 q3_df_salvias <- q3_df %>% filter(species %in% c("SALLEU", "SALMEL"))
 q3_df_outs    <- q3_df %>% filter(!(species %in% c("SALLEU", "SALMEL")))
 
