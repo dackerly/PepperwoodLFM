@@ -109,6 +109,8 @@ q3_df <- merge(q3_df1, pds_q3_df, by = c("species", "study"), all = T) %>%
   distinct() %>% 
   ungroup()
 
+q3_df %>% write_csv(here("data", "q3_df.csv"))
+
 q3_df_salvias <- q3_df %>% filter(species %in% c("SALLEU", "SALMEL"))
 q3_df_outs    <- q3_df %>% filter(!(species %in% c("SALLEU", "SALMEL")))
 ```
@@ -150,7 +152,7 @@ model_params <- c(
 )
 
 traits <- c(
-  "plc50_stem", "psi_tlp", "ldmc", "sla", "min_pd", "swc", "swc_g_calc"
+  "plc50_stem", "psi_tlp", "ldmc", "sla", "min_pd", "swc", "swc_g_calc", "min_pd"
 )
 
 vars_use <- c(model_params, traits)
@@ -402,7 +404,7 @@ tablesx
 write_csv(tablesx, here("results", "figures", "tableSX_traits.csv"))
 ```
 
-#Fig 7. P50 + TLP and model params
+#Fig 7. P50 + TLP and model params - all salvia
 
 ```{r}
 # ============================================================
@@ -767,42 +769,537 @@ ggsave(
 # F-test p-value chunk (overall model p, plus R2)
 # ============================================================
 # ============================================================
-# F-test table (overall model p, R2, + degrees of freedom)
+# # F-test table (overall model p, R2, + degrees of freedom)
+# # ============================================================
+# pairs <- tibble::tibble(
+#   panel     = c("A", "B", "C", "D"),
+#   response  = c("min_wp", "min_lfm", "max_lfm", "max_lfm"),
+#   predictor = c("plc50_stem", "plc50_stem", "plc50_stem", "psi_tlp")
+# )
+# 
+# ftest_table <- pairs %>%
+#   tidyr::expand_grid(dataset = c("With Salvia (q3_df)", "Without Salvia (q3_df_outs)")) %>%
+#   rowwise() %>%
+#   mutate(
+#     stats = list({
+#       if (dataset == "With Salvia (q3_df)") {
+#         get_model_stats(q3_df, response, predictor)
+#       } else {
+#         get_model_stats(q3_df_outs, response, predictor)
+#       }
+#     }),
+#     r2      = stats$r2,
+#     p_model = stats$p,
+#     df1     = stats$df1,
+#     df2     = stats$df2,
+#     sig     = ifelse(p_model < 0.05, "p < 0.05", "p ≥ 0.05")
+#   ) %>%
+#   ungroup() %>%
+#   mutate(
+#     r2      = round(r2, 3),
+#     p_model = format.pval(p_model, digits = 3, eps = 1e-3),
+#     df1     = as.integer(df1),
+#     df2     = as.integer(df2)
+#   ) %>%
+#   select(panel, response, predictor, dataset, r2, df1, df2, p_model, sig)
+# 
+# ftest_table
+
+
+```
+
+#Fig 7, just psimin ~ LDMC with salvia: 
+
+```{r}
 # ============================================================
-pairs <- tibble::tibble(
-  panel     = c("A", "B", "C", "D"),
-  response  = c("min_wp", "min_lfm", "max_lfm", "max_lfm"),
-  predictor = c("plc50_stem", "plc50_stem", "plc50_stem", "psi_tlp")
+# Fig 7: A–D with equal-size panels and a dedicated legend column
+#
+# Layout (all panels SAME SIZE):
+#   Col 1: A (top), B (mid), C (bottom)   [x = P50, flipped]
+#   Col 2: Legend (top spanning A+B), blank (mid), D (bottom) [x = ΨTLP, flipped]
+#
+# NEW REQUEST:
+#  - Panel A: regressions WITH vs WITHOUT Salvia (two lines + sig linetypes + two R²)
+#  - Panels B, C, D: single regression (no with/without split; single sig linetype; single R²)
+# ============================================================
+
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+library(here)
+
+if (!requireNamespace("ggnewscale", quietly = TRUE)) {
+  stop("Please install ggnewscale: install.packages('ggnewscale')")
+}
+
+# ----------------------------
+# Settings
+# ----------------------------
+salvia_spp <- c("SALLEU", "SALMEL")
+
+# Two-line colors (A only)
+reg_colors_split <- c(
+  "With Salvia"    = "darkgrey",
+  "Without Salvia" = "black"
 )
 
-ftest_table <- pairs %>%
-  tidyr::expand_grid(dataset = c("With Salvia (q3_df)", "Without Salvia (q3_df_outs)")) %>%
-  rowwise() %>%
-  mutate(
-    stats = list({
-      if (dataset == "With Salvia (q3_df)") {
-        get_model_stats(q3_df, response, predictor)
-      } else {
-        get_model_stats(q3_df_outs, response, predictor)
-      }
-    }),
-    r2      = stats$r2,
-    p_model = stats$p,
-    df1     = stats$df1,
-    df2     = stats$df2,
-    sig     = ifelse(p_model < 0.05, "p < 0.05", "p ≥ 0.05")
-  ) %>%
-  ungroup() %>%
-  mutate(
-    r2      = round(r2, 3),
-    p_model = format.pval(p_model, digits = 3, eps = 1e-3),
-    df1     = as.integer(df1),
-    df2     = as.integer(df2)
-  ) %>%
-  select(panel, response, predictor, dataset, r2, df1, df2, p_model, sig)
+# One-line color (B/C/D)
+reg_color_single <- c("All species" = "black")
 
-ftest_table
+sig_linetypes <- c(
+  "p < 0.05" = "solid",
+  "p ≥ 0.05" = "dashed"
+)
 
+axis_title_size <- 14
+axis_text_size  <- 12
+
+pt_size            <- 2.8
+pt_alpha           <- 0.85
+salvia_ring_size   <- 5
+salvia_ring_stroke <- 0.5
+
+# make legend slightly bigger
+legend_title_size <- 15
+legend_text_size  <- 11
+legend_key_h      <- unit(0.36, "cm")
+legend_key_w      <- unit(1.2, "cm")  # longer so dashed is obvious
+
+base_theme <- theme(
+  plot.margin = margin(6, 6, 6, 6),
+  axis.title = element_text(size = axis_title_size),
+  axis.text  = element_text(size = axis_text_size),
+  legend.title = element_text(size = legend_title_size),
+  legend.text  = element_text(size = legend_text_size),
+  legend.key.height = legend_key_h,
+  legend.key.width  = legend_key_w
+)
+
+# ----------------------------
+# Helpers
+# ----------------------------
+get_model_stats <- function(df, yvar, xvar) {
+  f   <- as.formula(paste0(yvar, " ~ ", xvar))
+  fit <- lm(f, data = df)
+  sm  <- summary(fit)
+
+  fstat <- sm$fstatistic
+  df1 <- unname(fstat[2])
+  df2 <- unname(fstat[3])
+  p_model <- pf(fstat[1], df1, df2, lower.tail = FALSE)
+
+  list(
+    r2  = unname(sm$r.squared),
+    p   = unname(p_model),
+    df1 = df1,
+    df2 = df2
+  )
+}
+
+p_to_sig_label <- function(p) {
+  ifelse(is.na(p) || p >= 0.05, "p ≥ 0.05", "p < 0.05")
+}
+
+# ----------------------------
+# Panel builder: SPLIT (With vs Without Salvia)  ==> for panel A only
+# ----------------------------
+build_panel_xy_split <- function(
+  xvar, yvar,
+  xlab = NULL,
+  ylab = NULL,
+  xscale = NULL,
+  yscale = NULL,
+  flip_x = FALSE,
+  show_x = FALSE,
+  show_y = TRUE,
+  add_r2 = TRUE
+) {
+
+  st_with    <- get_model_stats(q3_df,      yvar, xvar)
+  st_without <- get_model_stats(q3_df_outs, yvar, xvar)
+
+  sig_with    <- p_to_sig_label(st_with$p)
+  sig_without <- p_to_sig_label(st_without$p)
+
+  reg_df <- bind_rows(
+    q3_df      %>% mutate(.reg_group = "With Salvia",    .sig = sig_with),
+    q3_df_outs %>% mutate(.reg_group = "Without Salvia", .sig = sig_without)
+  )
+
+  salvia_df <- q3_df %>% filter(species %in% salvia_spp)
+
+  p <- ggplot() +
+    # points (all points from q3_df)
+    geom_point(
+      data = q3_df,
+      aes(x = .data[[xvar]], y = .data[[yvar]], color = species),
+      size = pt_size, alpha = pt_alpha
+    ) +
+    # salvia rings
+    geom_point(
+      data = salvia_df,
+      aes(x = .data[[xvar]], y = .data[[yvar]], color = species),
+      shape = 21, fill = NA,
+      size = salvia_ring_size, stroke = salvia_ring_stroke,
+      show.legend = FALSE
+    ) +
+    # species legend
+    color_species +
+    guides(
+      color = guide_legend(
+        title = "Species",
+        ncol = 2,
+        override.aes = list(size = 3.8, alpha = 1)
+      )
+    ) +
+    # regression scales (separate from species colors)
+    ggnewscale::new_scale_color() +
+    geom_smooth(
+      data = reg_df,
+      aes(x = .data[[xvar]], y = .data[[yvar]], color = .reg_group, linetype = .sig),
+      method = "lm", se = FALSE, linewidth = 0.95
+    ) +
+    scale_color_manual(
+      name = "Dataset",
+      values = reg_colors_split,
+      guide = guide_legend(ncol = 1, override.aes = list(linewidth = 1.25))
+    ) +
+    scale_linetype_manual(
+      name = "Significance",
+      values = sig_linetypes,
+      guide = guide_legend(ncol = 1, override.aes = list(linewidth = 1.25))
+    ) +
+    labs(
+      x = if (show_x) xlab else NULL,
+      y = if (show_y) ylab else NULL
+    ) +
+    base_theme +
+    theme(
+      legend.position = "right",
+      legend.box = "vertical",
+      legend.box.margin = margin(0, 0, 0, 0)
+    )
+
+  if (!is.null(xscale)) p <- p + xscale
+  if (!is.null(yscale)) p <- p + yscale
+  if (flip_x) p <- p + scale_x_reverse()
+
+  if (!show_x) {
+    p <- p + theme(
+      axis.title.x = element_blank(),
+      axis.text.x  = element_blank(),
+      axis.ticks.x = element_blank()
+    )
+  }
+  if (!show_y) {
+    p <- p + theme(
+      axis.title.y = element_blank(),
+      axis.text.y  = element_blank(),
+      axis.ticks.y = element_blank()
+    )
+  }
+
+  if (add_r2) {
+    p <- p +
+      annotate(
+        "text",
+        x = Inf, y = Inf,
+        label = paste0("R² (with) = ", sprintf("%.2f", st_with$r2)),
+        hjust = 1.02, vjust = 1.25, size = 4,
+        color = reg_colors_split["With Salvia"]
+      ) +
+      annotate(
+        "text",
+        x = Inf, y = Inf,
+        label = paste0("R² (without) = ", sprintf("%.2f", st_without$r2)),
+        hjust = 1.02, vjust = 2.55, size = 4,
+        color = reg_colors_split["Without Salvia"]
+      )
+  }
+
+  p
+}
+
+salvia_df <- q3_df %>% filter(species %in% salvia_spp)
+# ----------------------------
+# Panel builder: SINGLE regression (no with/without split) ==> for B/C/D
+# ----------------------------
+build_panel_xy_single <- function(
+  xvar, yvar,
+  xlab = NULL,
+  ylab = NULL,
+  xscale = NULL,
+  yscale = NULL,
+  flip_x = FALSE,
+  show_x = FALSE,
+  show_y = TRUE,
+  add_r2 = TRUE
+) {
+
+  st_all <- get_model_stats(q3_df, yvar, xvar)
+  sig_all <- p_to_sig_label(st_all$p)
+
+  reg_df <- q3_df %>% mutate(.reg_group = "All species", .sig = sig_all)
+  salvia_df <- q3_df %>% filter(species %in% salvia_spp)
+
+  p <- ggplot() +
+    # points
+    geom_point(
+      data = q3_df,
+      aes(x = .data[[xvar]], y = .data[[yvar]], color = species),
+      size = pt_size, alpha = pt_alpha
+    ) +
+    # salvia rings (still ring them if you want; does NOT create separate regression)
+    # geom_point(
+    #   data = salvia_df,
+    #   aes(x = .data[[xvar]], y = .data[[yvar]], color = species),
+    #   shape = 21, fill = NA,
+    #   size = salvia_ring_size, stroke = salvia_ring_stroke,
+    #   show.legend = FALSE) + 
+    color_species +
+    guides(
+      color = guide_legend(
+        title = "Species",
+        ncol = 2,
+        override.aes = list(size = 3.8, alpha = 1)
+      )
+    ) +
+    # regression scale (separate)
+    ggnewscale::new_scale_color() +
+    geom_smooth(
+      data = reg_df,
+      aes(x = .data[[xvar]], y = .data[[yvar]], color = .reg_group, linetype = .sig),
+      method = "lm", se = FALSE, linewidth = 0.95
+    ) +
+    scale_color_manual(
+      name = "Dataset",
+      values = reg_color_single,
+      guide = guide_legend(ncol = 1, override.aes = list(linewidth = 1.25))
+    ) +
+    scale_linetype_manual(
+      name = "Significance",
+      values = sig_linetypes,
+      guide = guide_legend(ncol = 1, override.aes = list(linewidth = 1.25))
+    ) +
+    labs(
+      x = if (show_x) xlab else NULL,
+      y = if (show_y) ylab else NULL
+    ) +
+    base_theme +
+    theme(
+      legend.position = "right",
+      legend.box = "vertical",
+      legend.box.margin = margin(0, 0, 0, 0)
+    )
+
+  if (!is.null(xscale)) p <- p + xscale
+  if (!is.null(yscale)) p <- p + yscale
+  if (flip_x) p <- p + scale_x_reverse()
+
+  if (!show_x) {
+    p <- p + theme(
+      axis.title.x = element_blank(),
+      axis.text.x  = element_blank(),
+      axis.ticks.x = element_blank()
+    )
+  }
+  if (!show_y) {
+    p <- p + theme(
+      axis.title.y = element_blank(),
+      axis.text.y  = element_blank(),
+      axis.ticks.y = element_blank()
+    )
+  }
+  if (add_r2) {
+    p <- p +
+      annotate(
+        "text",
+        x = Inf, y = Inf,
+        label = paste0("R² = ", sprintf("%.2f", st_all$r2)),
+        hjust = 1.02, vjust = 1.25, size = 4,
+        color = reg_color_single["All species"]
+      )
+  }
+
+  p
+}
+
+# ============================
+# Panels A–C: x = P50 (flipped)
+#   A = split; B,C = single
+# ============================
+# fig5a <- build_panel_xy_split(
+#   xvar = "plc50_stem", yvar = "min_wp",
+#   xlab = "P50 (MPa)", ylab = expression(Psi[MDmin]~"(MPa)"),
+#   flip_x = TRUE,
+#   show_x = FALSE,
+#   show_y = TRUE,
+#   add_r2 = TRUE
+# ) +
+#   geom_point(
+#       data = salvia_df,
+#       aes(x = plc50_stem, y = min_wp, color = species),
+#       shape = 21, fill = NA,
+#       size = salvia_ring_size, stroke = salvia_ring_stroke,
+#       show.legend = FALSE) 
+
+fig5a <- build_panel_xy_split(
+  xvar = "plc50_stem", yvar = "min_wp",
+  xlab = "P50 (MPa)", ylab = expression(Psi[MDmin]~"(MPa)"),
+  flip_x = TRUE,
+  show_x = FALSE,
+  show_y = TRUE,
+  add_r2 = TRUE
+) +
+  geom_abline(
+    intercept = 0, slope = -1,
+    linetype = "dotted", linewidth = 0.8
+  ) +
+  geom_point(
+    data = salvia_df,
+    aes(x = plc50_stem, y = min_wp, color = species),
+    shape = 21, fill = NA,
+    size = salvia_ring_size, stroke = salvia_ring_stroke,
+    show.legend = FALSE
+  )
+
+fig5b <- build_panel_xy_single(
+  xvar = "plc50_stem", yvar = "min_lfm",
+  xlab = "P50 (MPa)", ylab = "Min. Seasonal LFM (%)",
+  yscale = scale_y_continuous(
+    breaks = c(0.4, 0.6, 0.8, 1.0),
+    labels = c(40, 60, 80, 100)
+  ),
+  flip_x = TRUE,
+  show_x = FALSE,
+  show_y = TRUE,
+  add_r2 = TRUE)
+
+fig5c <- build_panel_xy_single(
+  xvar = "plc50_stem", yvar = "max_lfm",
+  xlab = "P50 (MPa)", ylab = "Max. Seasonal LFM (%)",
+  yscale = scale_y_continuous(
+    breaks = c(1.0, 1.5, 2.0, 2.5),
+    labels = c(100, 150, 200, 250)
+  ),
+  flip_x = TRUE,
+  show_x = TRUE,
+  show_y = TRUE,
+  add_r2 = TRUE
+)
+
+# ============================
+# Panel D: x = ΨTLP (flipped), y = max_lfm (single regression)
+#   - hide y labels/text (share with C visually)
+# ============================
+fig5d <- build_panel_xy_single(
+  xvar = "psi_tlp", yvar = "max_lfm",
+  xlab = expression(psi[TLP]~"(MPa)"),
+  ylab = "Max. Seasonal LFM (%)",
+  yscale = scale_y_continuous(
+    breaks = c(1.0, 1.5, 2.0, 2.5),
+    labels = c(100, 150, 200, 250)
+  ),
+  flip_x = TRUE,
+  show_x = TRUE,
+  show_y = FALSE,
+  add_r2 = TRUE
+)
+
+# ----------------------------
+# Legend pulled once (from A), then placed in a dedicated column
+#   (A includes: Species + Dataset (split) + Significance)
+# ----------------------------
+legend_grob <- cowplot::get_legend(
+  fig5a +
+    theme(
+      legend.position = "right",
+      legend.key = element_blank(),
+      legend.background = element_blank(),
+      legend.box.background = element_blank()
+    )
+)
+
+legend_plot <- cowplot::ggdraw() + cowplot::draw_grob(legend_grob)
+
+# ----------------------------
+# Build columns so legend spans A+B region
+# ----------------------------
+left_col <- cowplot::plot_grid(
+  fig5a + theme(legend.position = "none"),
+  fig5b + theme(legend.position = "none"),
+  fig5c + theme(legend.position = "none"),
+  ncol = 1,
+  align = "v",
+  axis = "l"
+)
+
+right_col <- cowplot::plot_grid(
+  legend_plot,
+  fig5d + theme(legend.position = "none"),
+  ncol = 1,
+  rel_heights = c(2, 1)
+)
+
+fig_all <- cowplot::plot_grid(
+  left_col,
+  right_col,
+  nrow = 1,
+  rel_widths = c(1, 0.80)
+)
+
+# ----------------------------
+# Labels (A,B,C,D)
+# ----------------------------
+fig_all_labeled <- cowplot::ggdraw(fig_all) +
+  cowplot::draw_plot_label(
+    label = c("A", "B", "C", "D"),
+    x = c(0.11, 0.11, 0.11, 0.58),
+    y = c(0.99, 0.66, 0.32, 0.32),
+    size = 16,
+    fontface = "bold"
+  )
+
+
+fig_all_labeled
+
+
+# ----------------------------
+# Save
+# ----------------------------
+ggsave(
+  plot = fig_all_labeled,
+  filename = here::here("figures", "fig5_ABCD_equal_panels_legend_topright_A_split_BCD_single.jpg"),
+  dpi = 600,
+  width = 6,
+  height = 8
+)
+
+
+```
+
+#Abline: 
+
+```{r}
+fig5a <- build_panel_xy_split(
+  xvar = "plc50_stem", yvar = "min_wp",
+  xlab = "P50 (MPa)", ylab = expression(Psi[MDmin]~"(MPa)"),
+  flip_x = TRUE,
+  show_x = FALSE,
+  show_y = TRUE,
+  add_r2 = TRUE
+) +
+  geom_abline(
+    intercept = 0, slope = 1,
+    linetype = "dotted", linewidth = 0.8
+  ) +
+  geom_point(
+    data = salvia_df,
+    aes(x = plc50_stem, y = min_wp, color = species),
+    shape = 21, fill = NA,
+    size = salvia_ring_size, stroke = salvia_ring_stroke,
+    show.legend = FALSE
+  )
 
 ```
 
@@ -1200,6 +1697,8 @@ library(here)
 
 
 ```{r}
+
+  library(ggnewscale)
 # ----------------------------
 # 1) Pull legend grob from figB (Species + Regression + Significance)
 # ----------------------------
@@ -1213,10 +1712,10 @@ legend_grob <- cowplot::get_legend(
       legend.box.background = element_blank(),
       #plot.margin = margin(5, 5, 5, 5),
       legend.title = element_text(size = 12),   # ↓ was ~15
-      legend.text  = element_text(size = 9),    # ↓ was ~11
+      legend.text  = element_text(size = 8),    # ↓ was ~11
       legend.spacing.y = unit(0, "pt"),
       legend.box.spacing = unit(0, "pt"),
-      legend.key.height = unit(0, "cm"),
+     # legend.key.height = unit(0, "cm"),
       legend.key.width  = unit(0, "cm"),
       legend.box.margin = margin(3,3,3,3)
 )

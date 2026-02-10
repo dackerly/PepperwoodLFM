@@ -27,6 +27,7 @@ color_species <- scale_color_manual(
     CALDEC = "#59385c",
     CEACUN = "#f6b3b0",
     
+    CEACOR = "#f6b3e0",
     CEAPAR = "#b38711",
     CEASPI = "#e48171",
     CERBET = "#d8b847",
@@ -63,7 +64,7 @@ color_genus_species <- scale_color_manual(
     "Arctostaphylos glandulosa"   = "#9d9cd5",
     "Arctostaphylos patula"       = "#b0799a",
     "Calocedrus decurrens"        = "#59385c",
-    "Ceanothus cordulatus"        = "#f6b3b0",
+    "Ceanothus cordulatus"        = "#f6b3e0",
     
     "Ceanothus cuneatus"          = "#f6b3b0",  # same genus color
     "Ceanothus parryi"            = "#b38711",
@@ -287,9 +288,12 @@ df1 <- df %>%
     study %in% c("StuntRanch") ~ "StR"
   ))
 
+df1 %>% 
+  write_csv(here("data", "df1.csv"))
+  
+
 unique(df1$study)
 ```
-
 
 
 "To estimate species-specific minimum water potential (Ψmin), we used a hybrid extreme-value framework following Martínez-Vilalta et al. (2021). For each species (binning site and year to increase sample sizes), we implemented a peaks-over-threshold (POT) approach in which the upper tail of the Ψ distribution was defined using a species-specific threshold corresponding to a high quantile of the data. The threshold probability (pu) was selected adaptively to ensure adequate sampling of the tail, with pu constrained between 0.80 and 0.90 and chosen such that the expected number of exceedances above the threshold was at least 15 observations whenever possible. Exceedances above this threshold were modeled using a generalized Pareto distribution (GPD), fitted by probability-weighted moments. When the fitted GPD was well defined (positive scale parameter) and the number of exceedances met the minimum tail size criterion (≥ 10), Ψmin was estimated as the 99th percentile of the fitted POT-GPD distribution, representing an extreme but statistically estimable lower bound of water potential. For species that did not meet these criteria due to limited sample size or unstable tail fits, Ψmin was instead defined as the most negative observed water potential (Ackerly et al, 2006? check this). This hybrid approach balances statistical robustness and biological realism by using EVT-based extrapolation only where the data support it, while avoiding excessive extrapolation for sparsely sampled species."
@@ -521,6 +525,7 @@ fig1 <- df1 %>%
        shape = "Study") +
     #scale_color_manual(values = cal_palette("sierra1", n = 22, type = "discrete")) +
   color_genus_species + 
+  scale_x_reverse() +   # <-- flip x-axis here
   theme(legend.position = "right", 
         legend.position.inside = c(0.1, 0.8)) +
   theme(
@@ -611,63 +616,73 @@ points(rep(-6.7, length(sites)), seq(2.84, 2.64 - 0.2 * (length(sites) - 1), len
 #Q0: Conceptual Model:
 
 #####Figure 2: (color)
+
 ```{r}
 ## conceptual model
 source(here("scripts", "lfm_functions.R"))
 spres <- read.csv(here("results", "species-results.csv"))
 head(spres)
+
+# ---- flip x-axis here (0 on left, more negative to the right) ----
+xlim_mwp <- c(0, -8)   # flipped relative to c(-8, 0)
+
 slp <- -0.198
 
 #MWPvec <- seq(-6,0,length.out=25)
-ilfm.sat.vec <- seq(0.25,1.25,length.out=25)
-MWPcrit <- c()
-for (i in 1:length(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i],slp),1/0.7)
-lfm.sat.vec <- 1/ilfm.sat.vec
-plot(MWPcrit,lfm.sat.vec,xlim=c(-8,0),ylim=c(0,4),type='l',lwd=2,xlab='Minimum MWP (MPa)',ylab='LFM @ MWP=0')
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 25)
+MWPcrit <- numeric(length(ilfm.sat.vec))
 
-for (i in 1:length(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i],slp),1/0.5)
-lfm.sat.vec <- 1/ilfm.sat.vec
-lines(MWPcrit,lfm.sat.vec,xlim=c(-8,0),ylim=c(0,4),lwd=1)
+for (i in seq_along(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1/0.7)
+lfm.sat.vec <- 1 / ilfm.sat.vec
+plot(MWPcrit, lfm.sat.vec, xlim = xlim_mwp, ylim = c(0,4),
+     type = "l", lwd = 2,
+     xlab = "Minimum MWP (MPa)", ylab = "LFM @ MWP=0")
 
-for (i in 1:length(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i],slp),1/1)
-lfm.sat.vec <- 1/ilfm.sat.vec
-lines(MWPcrit,lfm.sat.vec,xlim=c(-8,0),ylim=c(0,4),lwd=1)
+for (i in seq_along(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1/0.5)
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1)
+
+for (i in seq_along(ilfm.sat.vec)) MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], slp), 1/1)
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1)
 
 #points(I(1/model1.int)~minWP,data=spres[which(spres$study=='Coastal'),],pch=19)
-text(I(1/model1.int)~minWP,data=spres[which(spres$study=='Coastal'),],labels=letters)
+text(I(1/model1.int) ~ minWP,
+     data = spres[which(spres$study == "Coastal"),],
+     labels = letters)
 
-# conceptual figure, in inverted space - need to flip to LFM# conceptual figulettersre, in inverted space - need to flip to LFM
-lfm.sat <- c(0.9,0.5)
+# conceptual figure, in inverted space - need to flip to LFM
+lfm.sat <- c(0.9, 0.5)
 slp <- -0.2
-min.MWP <- c(-6,-3)
+min.MWP <- c(-6, -3)
 
-xy <- inversePlotData(c(min.MWP[1],0),c(lfm.sat[1],slp))
+xy <- inversePlotData(c(min.MWP[1], 0), c(lfm.sat[1], slp))
 head(xy)
-plot(xy$MWP,xy$LFM)
+plot(xy$MWP, xy$LFM, xlim = xlim_mwp)
 
-(MWPcrit <- solveForX(c(lfm.sat[2],slp),1/0.7))
+(MWPcrit <- solveForX(c(lfm.sat[2], slp), 1/0.7))
+
 #------
-(max.iLFM <- lfm.sat + min.MWP*slp)
-(min.LFM <- 1/max.iLFM)
+(max.iLFM <- lfm.sat + min.MWP * slp)
+(min.LFM <- 1 / max.iLFM)
 
-op=par(mfrow=c(1,2))
-plot(c(-7,0),c(0,3),type='n',xlab='MWP',ylab='1/LFM')
-x <- list()
-y <- list()
+op <- par(mfrow = c(1,2))
+
+plot(xlim_mwp, c(0,3), type = "n", xlab = "MWP", ylab = "1/LFM")
+x <- list(); y <- list()
 for (i in 1:2) {
-  x[[i]] <- c(0,min.MWP[i])
-  y[[i]] <- c(lfm.sat[i],max.iLFM[i])
-  lines(x[[i]],y[[i]],type='b',cex=2,pch=c(1,19))
+  x[[i]] <- c(0, min.MWP[i])
+  y[[i]] <- c(lfm.sat[i], max.iLFM[i])
+  lines(x[[i]], y[[i]], type = "b", cex = 2, pch = c(1,19))
 }
 
-xy1 <- inversePlotData(c(0,min.MWP[1]),c(lfm.sat[1],slp))
-xy2 <- inversePlotData(c(0,min.MWP[2]),c(lfm.sat[2],slp))
-plot(c(-7,0),c(0,3),type='n',xlab='MWP',ylab='LFM')
-lines(xy1$MWP,xy1$LFM,type='l')
-head(xy1)
-points(xy1[c(1,100),c('MWP','LFM')],cex=2,pch=c(1,19))
-lines(xy2$MWP,xy2$LFM,type='l')
-points(xy2[c(1,100),c('MWP','LFM')],cex=2,pch=c(1,19))
+xy1 <- inversePlotData(c(0, min.MWP[1]), c(lfm.sat[1], slp))
+xy2 <- inversePlotData(c(0, min.MWP[2]), c(lfm.sat[2], slp))
+plot(xlim_mwp, c(0,3), type = "n", xlab = "MWP", ylab = "LFM")
+lines(xy1$MWP, xy1$LFM, type = "l")
+points(xy1[c(1,100), c("MWP","LFM")], cex = 2, pch = c(1,19))
+lines(xy2$MWP, xy2$LFM, type = "l")
+points(xy2[c(1,100), c("MWP","LFM")], cex = 2, pch = c(1,19))
 par(op)
 
 #-----
@@ -675,7 +690,7 @@ par(op)
 cols <- c("steelblue3", "tomato3")  # i=1 -> cols[1], i=2 -> cols[2]
 
 xy <- inversePlotData(c(min.MWP[1], 0), c(lfm.sat[1], slp))
-plot(xy$MWP, xy$LFM)
+plot(xy$MWP, xy$LFM, xlim = xlim_mwp)
 
 (MWPcrit <- solveForX(c(lfm.sat[2], slp), 1/0.7))
 
@@ -685,14 +700,13 @@ plot(xy$MWP, xy$LFM)
 op <- par(mfrow = c(1, 2))
 
 ## Panel 1: 1/LFM vs MWP
-plot(c(-7, 0), c(0, 3), type = "n", xlab = "MWP", ylab = "1/LFM")
-mtext("A", side = 3, adj = 0, line = 1.2, font = 2, cex = 1.2)  # Panel label
+plot(xlim_mwp, c(0,3), type = "n", xlab = "MWP", ylab = "1/LFM")
+mtext("A", side = 3, adj = 0, line = 1.2, font = 2, cex = 1.2)
 x <- vector("list", 2)
 y <- vector("list", 2)
 for (i in 1:2) {
   x[[i]] <- c(0, min.MWP[i])
   y[[i]] <- c(lfm.sat[i], max.iLFM[i])
-  # open circle for first point, filled circle for second
   lines(x[[i]], y[[i]], col = cols[i], lwd = 2)
   points(x[[i]][1], y[[i]][1], pch = 21, bg = "white", col = cols[i], cex = 2, lwd = 2)
   points(x[[i]][2], y[[i]][2], pch = 19, col = cols[i], cex = 2)
@@ -701,31 +715,27 @@ for (i in 1:2) {
 ## Panel 2: LFM vs MWP
 xy1 <- inversePlotData(c(0, min.MWP[1]), c(lfm.sat[1], slp))
 xy2 <- inversePlotData(c(0, min.MWP[2]), c(lfm.sat[2], slp))
-plot(c(-7, 0), c(0, 3), type = "n", xlab = "MWP", ylab = "LFM")
-mtext("B", side = 3, adj = 0, line = 1.2, font = 2, cex = 1.2)  # Panel label
+plot(xlim_mwp, c(0,3), type = "n", xlab = "MWP", ylab = "LFM")
+mtext("B", side = 3, adj = 0, line = 1.2, font = 2, cex = 1.2)
 
 lines(xy1$MWP, xy1$LFM, col = cols[1], lwd = 2)
-points(xy1[1, c("MWP", "LFM")], pch = 21, bg = "white", col = cols[1], cex = 2, lwd = 2)
-points(xy1[100, c("MWP", "LFM")], pch = 19, col = cols[1], cex = 2)
+points(xy1[1, c("MWP","LFM")],   pch = 21, bg = "white", col = cols[1], cex = 2, lwd = 2)
+points(xy1[100, c("MWP","LFM")], pch = 19, col = cols[1], cex = 2)
 
 lines(xy2$MWP, xy2$LFM, col = cols[2], lwd = 2)
-points(xy2[1, c("MWP", "LFM")], pch = 21, bg = "white", col = cols[2], cex = 2, lwd = 2)
-points(xy2[100, c("MWP", "LFM")], pch = 19, col = cols[2], cex = 2)
+points(xy2[1, c("MWP","LFM")],   pch = 21, bg = "white", col = cols[2], cex = 2, lwd = 2)
+points(xy2[100, c("MWP","LFM")], pch = 19, col = cols[2], cex = 2)
 
 par(op)
 
-#----
+# ---- ggplot version: flip x-axis with scale_x_reverse() ---------------------
 library(dplyr)
 library(ggplot2)
 library(patchwork)
 
-# Colors mapped consistently across both panels
 cols <- c("steelblue3", "tomato3")
-names(cols) <- c("1","2")  # map to id "1" and "2"
+names(cols) <- c("1","2")
 
-# --- Data prep ---------------------------------------------------------------
-
-# Panel A (1/LFM vs MWP): two straight line segments with endpoints
 max.iLFM <- lfm.sat + min.MWP * slp
 
 dfA_lines <- tibble(
@@ -734,50 +744,53 @@ dfA_lines <- tibble(
   invLFM = c(lfm.sat[1], max.iLFM[1], lfm.sat[2], max.iLFM[2])
 )
 
-dfA_open <- dfA_lines %>%
-  group_by(id) %>%
-  slice_head(n = 1) %>%
-  ungroup()
+dfA_open <- dfA_lines %>% group_by(id) %>% slice_head(n = 1) %>% ungroup()
+dfA_filled <- dfA_lines %>% group_by(id) %>% slice_tail(n = 1) %>% ungroup()
 
-dfA_filled <- dfA_lines %>%
-  group_by(id) %>%
-  slice_tail(n = 1) %>%
-  ungroup()
-
-# Panel B (LFM vs MWP): two curves from inversePlotData
 xy1 <- inversePlotData(c(0, min.MWP[1]), c(lfm.sat[1], slp)) %>% mutate(id = factor(1))
 xy2 <- inversePlotData(c(0, min.MWP[2]), c(lfm.sat[2], slp)) %>% mutate(id = factor(2))
 dfB_curve <- bind_rows(xy1, xy2)
 
-dfB_open <- dfB_curve %>%
-  group_by(id) %>%
-  slice_head(n = 1) %>%
-  ungroup()
+dfB_open <- dfB_curve %>% group_by(id) %>% slice_head(n = 1) %>% ungroup()
+dfB_filled <- dfB_curve %>% group_by(id) %>% slice_tail(n = 1) %>% ungroup()
 
-dfB_filled <- dfB_curve %>%
-  group_by(id) %>%
-  slice_tail(n = 1) %>%
-  ungroup()
+axis_title_size <- 14
+axis_text_size  <- 12
 
-# --- Plots -------------------------------------------------------------------
+pt_size            <- 2.8
+pt_alpha           <- 0.85
+salvia_ring_size   <- 5
+salvia_ring_stroke <- 0.5
 
-# Panel A: LFM vs MWP
+# make legend slightly bigger
+legend_title_size <- 15
+legend_text_size  <- 11
+legend_key_h      <- unit(0.36, "cm")
+legend_key_w      <- unit(1.2, "cm")  # longer so dashed is obvious
+
+base_theme <- theme(
+  plot.margin = margin(6, 6, 6, 6),
+  axis.title = element_text(size = axis_title_size),
+  axis.text  = element_text(size = axis_text_size),
+  legend.title = element_text(size = legend_title_size),
+  legend.text  = element_text(size = legend_text_size),
+  legend.key.height = legend_key_h,
+  legend.key.width  = legend_key_w
+)
+
 pA <- ggplot(dfB_curve, aes(x = MWP, y = LFM, color = id)) +
   geom_line(linewidth = 1) +
   geom_vline(xintercept = 0, linetype="dotted") +
-  geom_point(data = dfB_open,
-             aes(x = MWP, y = LFM),
-             shape = 21, fill = "white", size = 3.5, stroke = 1.2) +
-  geom_point(data = dfB_filled,
-             aes(x = MWP, y = LFM),
-             shape = 19, size = 3.5) +
-  annotate("text", x = -7, y = 3, label = "A", fontface = "bold",
+  geom_point(data = dfB_open,   shape = 21, fill = "white", size = 3.5, stroke = 1.2) +
+  geom_point(data = dfB_filled, shape = 19, size = 3.5) +
+  annotate("text", x = -0.2, y = 3, label = "A", fontface = "bold",
            hjust = 0, vjust = 1, size = 5) +
-  coord_cartesian(xlim = c(-7, 0), ylim = c(0, 3)) +
+  coord_cartesian(ylim = c(0,3)) +
+  scale_x_reverse(limits = xlim_mwp) +   # <-- flip x-axis here
   scale_color_manual(values = cols, guide = "none") +
-  labs(x = "Midday Water Potential (MPa)", y = "LFM (%)")
+  labs(x = "Midday Water Potential (MPa)", y = "LFM (%)") +
+  base_theme
 
-# Panel B: 1/LFM vs MWP
 pB <- ggplot() +
   geom_line(data = dfA_lines,
             aes(x = MWP, y = invLFM, group = id, color = id), linewidth = 1) +
@@ -788,31 +801,26 @@ pB <- ggplot() +
   geom_point(data = dfA_filled,
              aes(x = MWP, y = invLFM, color = id),
              shape = 19, size = 3.5) +
-  annotate("text", x = -7, y = 3, label = "B", fontface = "bold",
+  annotate("text", x = -0.2, y = 3, label = "B", fontface = "bold",
            hjust = 0, vjust = 1, size = 5) +
-  coord_cartesian(xlim = c(-7, 0), ylim = c(0, 3)) +
+  coord_cartesian(ylim = c(0,3)) +
+  scale_x_reverse(limits = xlim_mwp) +   # <-- flip x-axis here
   scale_color_manual(values = cols, guide = "none") +
-  labs(x = "Midday Water Potential (MPa)", y = "1/LFM (%)")
+  labs(x = "Midday Water Potential (MPa)", y = "1/LFM (%)") +
+  base_theme
 
-# Side-by-side layout (no legend)
-pA + pB + plot_layout(ncol = 2)
-
-# Create the combined plot
-final_plot <- pA + pB + plot_layout(ncol = 2, 
-                                    axis_titles = "collect")
+final_plot <- pA + pB + plot_layout(ncol = 2, axis_titles = "collect")
 final_plot
 
-# Save it
 ggsave(
-  filename = here("figures", "Figure2_color.png"),  # or .pdf, .jpg, etc.
+  filename = here("figures", "Figure2_color.png"),
   plot     = final_plot,
-  width    = 8,     # inches
-  height   = 4,     # inches
-  dpi      = 300    # high resolution
+  width    = 8,
+  height   = 4,
+  dpi      = 300
 )
-#----
-```
 
+```
 
 #Q1: Slopes and models
 
@@ -821,7 +829,7 @@ Intro/discussion:
 1) What are the aggregate and species-level relationships between leaf water potential and live fuel moisture, and how do they compare across studies? We predict that initial LFM and minimum WP will explain variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2), and that these will be largely consistent across species.  
 
 
-#####Figure SX. (linear fits, 1/lfm vs lfm)
+###Transform to 1/LFM: 
 Linear relationship between iLFM and middays: 
 
 ```{r}
@@ -865,71 +873,14 @@ best_model <- ifelse(AIC(mod_inv) < AIC(mod), "Transformed LFM (iLFM)", "Untrans
 cat("Best model based on AIC:", best_model, "\n")
 ```
 
-#Table SX 
-slope coefs, with cons
-```{r, models}
-#With conifers included: 
-library(lme4)
+##Mixed-effects model: 
 
-mod_spp_int <- glm(ilfm ~ mwp*species, data = df1, family = gaussian)
-#mod_spp_int_lmer <- lmer(ilfm ~ mwp*species + species|study, data = df1, REML = T)
-mod_spp_noint <- glm(ilfm ~ mwp + species, data = df1, family = gaussian)
-#mod_spp_lmer <- lmer(ilfm ~ mwp + species + 1|study, data = df1)
-
-car::vif(mod_spp_noint)
-
-aic <- AIC(mod_spp_int, mod_spp_noint)
-aic
-BIC(mod_spp_int, mod_spp_noint)
-
-anova(mod_spp_int, mod_spp_noint)
-
-# AIC(mod_spp_lmer, mod_spp_noint_lmer)
-# BIC(mod_spp_lmer, mod_spp_noint_lmer)
-# anova(mod_spp_lmer, mod_spp_noint_lmer)
-
-plot(mod_spp_noint)
-
-plot(mod_spp_int)
-
-#r2: 
-R2_spp_int <- performance::r2(mod_spp_int)
-R2_spp_int
-
-R2_spp_noint <- performance::r2(mod_spp_noint)
-R2_spp_noint
-
-#model details: 
-coef(summary(mod_spp_int))
-summary(mod_spp_int)
-
-summary(mod_spp_noint)
-
-tablesx_coefs <- broom::tidy(mod_spp_noint) %>% 
-    dplyr::mutate(across(where(is.numeric), round, 4)) %>% 
-  mutate(p.value.stars = case_when(
-    p.value < 0.001 ~ "***",
-    p.value < 0.01 & p.value < 0.001 ~ "**",
-    p.value < 0.05 & p.value > 0.01 ~ "*", 
-    TRUE ~ as.character(" ")
-  ))
-
-write_csv(tablesx_coefs, here("results", "figures", "tableSX_coefs.csv"))
-
-tablesx_ints_coefs <- broom::tidy(mod_spp_int) %>% 
-    dplyr::mutate(across(where(is.numeric), round, 4)) %>% 
-  mutate(p.value.stars = case_when(
-    p.value < 0.001 ~ "***",
-    p.value < 0.01 & p.value < 0.001 ~ "**",
-    p.value < 0.05 & p.value > 0.01 ~ "*", 
-    TRUE ~ as.character(" ")
-  ))
-tablesx_ints_coefs
-
-write_csv(tablesx_ints_coefs, here("results", "figures", "tableSX_ints_coefs_conifers.csv"))
-```
-
-####Use lmer: 
+Asks: 
+- Do we need an interaction?
+    - Yes
+- Do we need 1|study random effect? 
+    - Yes
+- 
 ```{r}
 # With conifers included (mixed-effects): random intercept for study
 library(lme4)
@@ -992,7 +943,7 @@ summary(mod_spp_noint)
 #     is.na(p.value) ~ "",
 #     p.value < 0.001 ~ "***",
 #     p.value < 0.01  ~ "**",
-#     
+# 
 #     p.value < 0.05  ~ "*",
 #     TRUE ~ ""
 #   ))
@@ -1008,40 +959,10 @@ summary(mod_spp_noint)
 #     p.value < 0.05  ~ "*",
 #     TRUE ~ ""
 #   ))
-
-write_csv(tablesx_ints_coefs, here("results", "figures", "tableSX_ints_coefs_conifers_lmer.csv"))
+# 
+# write_csv(tablesx_ints_coefs, here("results", "figures", "tableSX_ints_coefs_conifers_lmer.csv"))
 ```
-
-
-```{r}
-#Do we need a random effect? YES
-m_re <- lmer(ilfm ~ mwp * species + (1 | study), data = df1, REML = FALSE)
-m_fe <- lm(  ilfm ~ mwp * species,               data = df1)
-
-# Likelihood ratio test: does adding (1|study) improve fit?
-#lme4::anova(m_fe, m_re)
-
-# AIC/BIC comparison
-aic <- AIC(m_fe, m_re)
-aic
-BIC(m_fe, m_re)
-
-# How big is the study variance?
-VarCorr(m_re)
-lme4::isSingular(m_re, tol = 1e-5)
-
-vc <- as.data.frame(VarCorr(m_re))
-vc
-
-performance::icc(m_re)  
-
-summary(m_re)
-
-write_csv(df1, here::here("temp_datasets", "df1.csv"))
-```
-
-Chats prescription for looking at study effect: 
-
+Study random effect: 
 ```{r}
 # ============================================================
 # Sensitivity test: Do species-level INTERCEPTS / SLOPES change
@@ -1110,13 +1031,9 @@ cat("\nSpecies with >1 study:",
 # ---- 3) Fit comparable models (both ML; required for LRT) ----
 # IMPORTANT: Fit the "no random effect" model using lmer() too,
 # so the likelihood ratio test is valid (nested models, same likelihood family).
-m_fe_lmer <- lmer(ilfm ~ mwp_c * species, data = df1, REML = FALSE)
+m_fe_lmer <- lm(ilfm ~ mwp_c * species, data = df1)
 m_re      <- lmer(ilfm ~ mwp_c * species + (1 | study), data = df1, REML = FALSE)
 
-# ---- 4) Compare models: LRT + AIC/BIC ----
-# Likelihood ratio test for adding (1|study)
-lrt <- anova(m_fe_lmer, m_re)
-print(lrt)
 
 # AIC / BIC comparison
 aic_tab <- AIC(m_fe_lmer, m_re)
@@ -1251,74 +1168,7 @@ ggsave(
 
 ```
 
-
-######Use emmeans: 
-```{r}
-library(emmeans)
-library(dplyr)
-library(readr)
-library(here)
-
-# choose a meaningful reference mwp
-mwp_ref <- mean(df1$mwp, na.rm = TRUE)
-
-# ----------------------------
-# Species-specific intercepts (iLFM)
-# ----------------------------
-emm_int <- emmeans(
-  mod_spp_int,
-  ~ species,
-  at = list(mwp = mwp_ref)
-) %>%
-  as.data.frame() %>%
-  rename(
-    intercept_iLFM = emmean,
-    intercept_iLFM_SE = SE,
-    intercept_iLFM_lwr = lower.CL,
-    intercept_iLFM_upr = upper.CL
-  )
-
-# ----------------------------
-# Species-specific slopes (iLFM vs mwp)
-# ----------------------------
-emm_slp <- emtrends(
-  mod_spp_int,
-  ~ species,
-  var = "mwp"
-) %>%
-  as.data.frame() %>%
-  rename(
-    slope_iLFM = mwp.trend,
-    slope_iLFM_SE = SE,
-    slope_iLFM_lwr = lower.CL,
-    slope_iLFM_upr = upper.CL
-  ) %>% 
-  select(-df)
-
-# ----------------------------
-# Combine + convert to LFM space
-# ----------------------------
-table_species_params <- emm_int %>%
-  left_join(emm_slp, by = "species") %>%
-  mutate(
-    # intercept conversion
-    intercept_LFM = 100*(1 / intercept_iLFM),
-
-    # slope conversion via delta method
-    #slope_LFM = - 100*(slope_iLFM / (intercept_iLFM^2)),
-
-    mwp_ref = mwp_ref
-  ) %>%
-  mutate(across(where(is.numeric), round, 4)) %>% 
-  select(-df)
-
-write_csv(
-  table_species_params,
-  here("results", "figures", "tableSX_species_intercept_slope_LFM.csv")
-)
-
-```
-
+#Table S1: Mixed effects model results: 
 
 ```{r}
 library(lme4)
@@ -1391,1079 +1241,93 @@ write_csv(
   table_species_params,
   here("results", "figures", "tableSX_species_intercept_slope_LFM_mixed.csv")
 )
-
 ```
 
-
-######Bayesian forest plot: 
-```{r}
-# ============================================================
-# Bayesian species-specific slopes + forest plot (credible intervals)
-#   - Model estimates a separate slope for EACH species
-#   - Optional random intercept for study
-# ============================================================
-
-#install.packages(c("brms", "tidybayes", "dplyr", "ggplot2", "readr", "forcats", "posterior"))
-library(brms)
-library(tidybayes)
-library(dplyr)
-library(ggplot2)
-library(readr)
-library(forcats)
-library(posterior)
-
-#install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
-#cmdstanr::install_cmdstan()
-
-
-# ---- load data ----
-
-# ---- (recommended) scale mwp for stability/convergence ----
-df1 <- df1 %>%
-  mutate(
-    species = as.factor(species),
-    study   = as.factor(study),
-    mwp_z   = as.numeric(scale(mwp))
-  )
-
-# ============================================================
-# 1) Bayesian model: separate intercept AND slope per species
-#    This parameterization avoids a reference species:
-#      ilfm ~ 0 + species + 0 + mwp_z:species
-#    Optional: + (1|study) for study-to-study shifts
-# ============================================================
-
-priors <- c(
-  prior(normal(0, 1), class = "b"),          # slopes/intercepts on scaled mwp
-  prior(student_t(3, 0, 1), class = "sigma") # residual SD
-)
-
-fit_spp_slopes <- brm(
-  formula = ilfm ~ 0 + species + 0 + mwp_z:species + (1 | study),
-  data    = df1,
-  family  = gaussian(),
-  prior   = priors,
-  chains  = 4, cores = 4, iter = 4000, warmup = 1000,
-  seed    = 123,
-  control = list(adapt_delta = 0.99, max_treedepth = 15)
-)
-
-# quick checks
-pp_check(fit_spp_slopes)
-summary(fit_spp_slopes)
-
-# ============================================================
-# 2) Extract posterior draws for EACH species slope
-#    Coefficient names look like: "mwp_z:speciesABCO" etc.
-# ============================================================
-
-library(tidybayes)
-library(dplyr)
-library(ggplot2)
-
-# posterior draws for each species slope
-slope_draws <- fit_spp_slopes %>%
-  gather_draws(`^b_species.*:mwp_z$`, regex = TRUE) %>%
-  mutate(
-    species = gsub("^b_species", "", .variable),
-    species = gsub(":mwp_z$", "", species)
-  )
-
-# summarize to median + 95% credible interval
-forest_df <- slope_draws %>%
-  group_by(species) %>%
-  summarise(
-    slope_med = median(.value),
-    slope_lo  = quantile(.value, 0.025),
-    slope_hi  = quantile(.value, 0.975),
-    .groups   = "drop"
-  ) %>%
-  arrange(slope_med) %>%
-  mutate(species = factor(species, levels = species))
-
-# forest plot
-draws_long <- slope_draws %>%
-  transmute(.draw, species, slope = .value)
-
-# Rebuild wide posterior draws
-draws_wide <- draws_long %>%
-  select(.draw, species, slope) %>%
-  tidyr::pivot_wider(names_from = species, values_from = slope) %>%
-  arrange(.draw)
-
-
-draws_wide <- draws_long %>%
-  pivot_wider(names_from = species, values_from = slope) %>%
-  arrange(.draw)
-
-# Drop .draw and FORCE numeric matrix
-slope_mat <- draws_wide %>%
-  select(-.draw) %>%
-  as.data.frame() %>%
-  mutate(across(everything(), as.numeric)) %>%
-  as.matrix()
-
-# sanity check
-stopifnot(is.numeric(slope_mat))
-
-sp <- colnames(slope_mat)
-
-# Count NA values per species slope
-na_counts <- colSums(is.na(slope_mat))
-summary(na_counts)
-
-
-library(posterior)
-library(dplyr)
-library(tidyr)
-library(stringr)
-
-# 1) Get ALL draws as a draws_df
-d <- as_draws_df(fit_spp_slopes)
-
-# 2) Grab the slope columns you showed: b_speciesXXXX:mwp_z
-slope_cols <- grep("^b_species.*:mwp_z$", variables(d), value = TRUE)
-
-# 3) Build a clean draws table: rows = posterior draws, cols = species
-slope_df <- d %>%
-  as.data.frame() 
-all_vars <- variables(d)
-
-slope_cols <- grep("^b_species.*:mwp_z$", all_vars, value = TRUE)
-
-slope_cols
-
-slope_df <- d %>%
-  as.data.frame() %>%
-  select(all_of(slope_cols))
-
-new_names <- gsub("^b_species", "", slope_cols)
-new_names <- gsub(":mwp_z$", "", new_names)
-
-colnames(slope_df) <- new_names
-
-slope_mat <- as.matrix(slope_df)
-```
-
-Posterior distributions, do they overlap with the median of the grand slope? 
-
-
-```{r}
-# install.packages(c("tidybayes", "ggridges", "dplyr", "ggplot2", "forcats"))
-library(tidybayes)
-library(dplyr)
-library(ggplot2)
-library(ggridges)
-library(forcats)
-
-# ----------------------------
-# 1) Extract posterior draws for species-specific slopes
-# ----------------------------
-slope_draws <- fit_spp_slopes %>%
-  gather_draws(`^b_species.*:mwp_z$`, regex = TRUE) %>%
-  mutate(
-    species = gsub("^b_species", "", .variable),
-    species = gsub(":mwp_z$", "", species)
-  ) %>%
-  transmute(.draw, species, slope = .value)
-
-# ----------------------------
-# 2) Define "grand slope" posterior
-#    (mean slope across species, per draw)
-# ----------------------------
-grand_draws <- slope_draws %>%
-  group_by(.draw) %>%
-  summarise(
-    grand_slope = mean(slope, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-grand_med <- median(grand_draws$grand_slope)
-
-# ----------------------------
-# 3) Inferential flag:
-#    species is "Different from grand" if
-#    95% CrI of (species_slope - grand_slope) excludes 0
-# ----------------------------
-diff_flag <- slope_draws %>%
-  left_join(grand_draws, by = ".draw") %>%
-  mutate(diff = slope - grand_slope) %>%
-  group_by(species) %>%
-  summarise(
-    diff_lo = quantile(diff, 0.025),
-    diff_hi = quantile(diff, 0.975),
-    med     = median(slope),
-    .groups = "drop"
-  ) %>%
-  mutate(diff_from_grand = !(diff_lo <= 0 & diff_hi >= 0))
-
-# ----------------------------
-# 4) Order species by median slope
-# ----------------------------
-species_order <- diff_flag %>%
-  arrange(med) %>%
-  pull(species)
-
-plot_df <- slope_draws %>%
-  left_join(diff_flag %>% select(species, diff_from_grand), by = "species") %>%
-  mutate(
-    species = factor(species, levels = species_order),
-    diff_from_grand = factor(
-      diff_from_grand,
-      levels = c(FALSE, TRUE),
-      labels = c("Not different from grand", "Different from grand")
-    )
-  )
-
-# ----------------------------
-# 5) Ridgeline posterior plot
-# ----------------------------
-ggplot(plot_df, aes(x = slope, y = species, fill = diff_from_grand)) +
-  geom_vline(xintercept = 0, linetype = 2, linewidth = 0.4) +
-  geom_vline(xintercept = grand_med, linewidth = 0.6) +
-  geom_density_ridges(
-    scale = 2.2,
-    rel_min_height = 0.01,
-    alpha = 0.85,
-    color = NA
-  ) +
-  labs(
-    x = "Posterior of species slope (ilfm ~ mwp_z)",
-    y = NULL,
-    fill = NULL
-  ) +
-  theme_classic(base_size = 14) + 
-  scale_fill_manual(values = c("grey80","black"
-  ))
-
-```
-###### Color by genus
-
-```{r, eval = F}
-library(tidybayes)
-library(dplyr)
-library(ggplot2)
-library(ggridges)
-library(forcats)
-library(stringr)
-
-# ----------------------------
-# 0) Genus lookup from SpCodes
-#    expects columns: species, Genus
-# ----------------------------
-genus_lookup <- SpCodes %>%
-  select(species = SpCode6, Genus) %>%
-  distinct() %>%
-  mutate(
-    Genus = trimws(as.character(Genus)),
-    Genus = ifelse(is.na(Genus) | Genus == "", "Unknown", Genus)
-  )
-
-# ----------------------------
-# 1) Extract posterior draws for species-specific slopes
-# ----------------------------
-slope_draws <- fit_spp_slopes %>%
-  gather_draws(`^b_species.*:mwp_z$`, regex = TRUE) %>%
-  mutate(
-    species = gsub("^b_species", "", .variable),
-    species = gsub(":mwp_z$", "", species)
-  ) %>%
-  transmute(.draw, species, slope = .value)
-
-# ----------------------------
-# 2) Define "grand slope" posterior
-#    (mean slope across species, per draw)
-# ----------------------------
-grand_draws <- slope_draws %>%
-  group_by(.draw) %>%
-  summarise(grand_slope = mean(slope, na.rm = TRUE), .groups = "drop")
-
-grand_med <- median(grand_draws$grand_slope)
-
-# ----------------------------
-# 3) Inferential flag:
-#    species is "Different from grand" if
-#    95% CrI of (species_slope - grand_slope) excludes 0
-# ----------------------------
-diff_flag <- slope_draws %>%
-  left_join(grand_draws, by = ".draw") %>%
-  mutate(diff = slope - grand_slope) %>%
-  group_by(species) %>%
-  summarise(
-    diff_lo = quantile(diff, 0.025),
-    diff_hi = quantile(diff, 0.975),
-    med     = median(slope),
-    .groups = "drop"
-  ) %>%
-  mutate(diff_from_grand = !(diff_lo <= 0 & diff_hi >= 0)) %>%
-  left_join(genus_lookup, by = "species")
-
-# ----------------------------
-# 4) Ordering:
-#    - priority genera at TOP
-#    - species ordered by median slope WITHIN genus
-# ----------------------------
-genus_priority <- c("Abies", "Pinus", "Pseudotsuga", "Calocedrus")
-
-genus_priority <- genus_priority[genus_priority %in% unique(diff_flag$Genus)]
-
-genus_order <- c(
-  genus_priority,
-  sort(setdiff(unique(diff_flag$Genus), genus_priority))
-)
-
-species_order_top_to_bottom <- diff_flag %>%
-  mutate(Genus = factor(Genus, levels = genus_order)) %>%
-  arrange(Genus, med) %>%
-  pull(species)
-
-# ggplot puts last level at the top → reverse
-species_levels_for_plot <- rev(species_order_top_to_bottom)
-
-# ----------------------------
-# 5) Build plotting df
-# ----------------------------
-plot_df <- slope_draws %>%
-  left_join(diff_flag %>% select(species, diff_from_grand, Genus), by = "species") %>%
-  mutate(
-    species = factor(species, levels = species_levels_for_plot),
-    Genus   = factor(Genus, levels = genus_order),
-    diff_from_grand = factor(
-      diff_from_grand,
-      levels = c(FALSE, TRUE),
-      labels = c("Not different from grand", "Different from grand")
-    )
-  )
-
-# ----------------------------
-# 6) Axis text colors by Genus
-#    (uses your existing genus_colors named vector)
-# ----------------------------
-
-genus_colors <- c(
-  Abies          = "#17154f",
-  Adenostoma     = "#2f357c",
-  Arbutus        = "#6c5d9e",
-  Arctostaphylos = "#9d9cd5",
-  Calocedrus     = "#59385c",
-  Ceanothus      = "#f6b3b0",
-  Cercocarpus    = "#d8b847",
-  Eriogonum      = "#bf3729",
-  Heteromeles    = "#e69b00",
-  Malosma        = "#f5bb50",
-  Pinus          = "#ada43b",
-  Pseudotsuga    = "#355828",
-  Quercus        = "#df8d71",  # <-- pink, as requested
-  Salvia         = "#d48f90",
-  Umbellularia   = "#d8b847"
-)
-
-
-
-species_levels <- levels(plot_df$species)
-
-species_levels <- levels(plot_df$species)
-
-axis_y_cols <- diff_flag %>%
-  distinct(species, Genus) %>%
-  mutate(
-    Genus = ifelse(is.na(Genus) | Genus == "", "Unknown", Genus),
-    col   = unname(genus_colors[Genus]),
-    col   = ifelse(is.na(col), "grey30", col)
-  ) %>%
-  slice(match(species_levels, species)) %>%   # <<< THIS is the key fix
-  pull(col)
-
-
-# ----------------------------
-# 7) Ridgeline posterior plot
-# ----------------------------
-ggplot(plot_df, aes(x = slope, y = species, fill = diff_from_grand)) +
-  geom_vline(xintercept = 0, linetype = 2, linewidth = 0.4) +
-  geom_vline(xintercept = grand_med, linewidth = 0.6) +
-  geom_density_ridges(
-    scale = 2.2,
-    rel_min_height = 0.01,
-    alpha = 0.85,
-    color = NA
-  ) +
-  scale_fill_manual(values = c("grey80", "black")) +
-  labs(
-    x = "Posterior of species slope (ilfm ~ mwp_z)",
-    y = NULL,
-    fill = NULL
-  ) +
-  theme_classic(base_size = 14) +
-  theme(
-    legend.position = "top",
-    axis.text.y = element_text(color = axis_y_cols)
-  ) + theme(axis.text.y = element_text(color = axis_y_cols))
-
-```
-
-#Fig. 2: Genus but ordered correctly
-```{r}
-library(tidybayes)
-library(dplyr)
-library(ggplot2)
-library(ggridges)
-library(forcats)
-library(stringr)
-
-# ----------------------------
-# 0) Genus lookup from SpCodes
-#    expects columns: SpCode6, Genus
-# ----------------------------
-genus_lookup <- SpCodes %>%
-  select(species = SpCode6, Genus) %>%
-  distinct() %>%
-  mutate(
-    Genus = trimws(as.character(Genus)),
-    Genus = ifelse(is.na(Genus) | Genus == "", "Unknown", Genus)
-  )
-
-# ----------------------------
-# 1) Extract posterior draws for species-specific slopes
-# ----------------------------
-slope_draws <- fit_spp_slopes %>%
-  gather_draws(`^b_species.*:mwp_z$`, regex = TRUE) %>%
-  mutate(
-    species = gsub("^b_species", "", .variable),
-    species = gsub(":mwp_z$", "", species)
-  ) %>%
-  transmute(.draw, species, slope = .value)
-
-# ----------------------------
-# 2) Define "grand slope" posterior (mean across species, per draw)
-# ----------------------------
-grand_draws <- slope_draws %>%
-  group_by(.draw) %>%
-  summarise(grand_slope = mean(slope, na.rm = TRUE), .groups = "drop")
-
-grand_med <- median(grand_draws$grand_slope)
-
-# ----------------------------
-# 3) Inferential flag: different from grand if 95% CrI of (slope - grand) excludes 0
-# ----------------------------
-diff_flag <- slope_draws %>%
-  left_join(grand_draws, by = ".draw") %>%
-  mutate(diff = slope - grand_slope) %>%
-  group_by(species) %>%
-  summarise(
-    diff_lo = quantile(diff, 0),
-    diff_hi = quantile(diff, 1),
-    mean    = mean(slope),          # <-- posterior mean for ordering
-    med     = median(slope),
-    .groups = "drop"
-  ) %>%
-  mutate(diff_from_grand = !(diff_lo <= 0 & diff_hi >= 0)) %>%
-  left_join(genus_lookup, by = "species")
-
-# ----------------------------
-# 4) Ordering: by posterior MEAN only (no genus blocking)
-# ----------------------------
-species_order_top_to_bottom <- diff_flag %>%
-  arrange(desc(mean)) %>%      # use arrange(desc(mean)) if you want highest at top
-  pull(species)
-
-# ggplot puts last level at the top → reverse
-species_levels_for_plot <- rev(species_order_top_to_bottom)
-
-# ----------------------------
-# 5) Build plotting df
-# ----------------------------
-plot_df <- slope_draws %>%
-  left_join(diff_flag %>% select(species, diff_from_grand, Genus), by = "species") %>%
-  mutate(
-    species = factor(species, levels = species_levels_for_plot),
-    diff_from_grand = factor(
-      diff_from_grand,
-      levels = c(FALSE, TRUE),
-      labels = c("Not different from grand", "Different from grand")
-    )
-  )
-
-# ----------------------------
-# 6) Axis text colors by Genus (fixed mapping)
-# ----------------------------
-genus_colors <- c(
-  Abies          = "#17154f",
-  Adenostoma     = "#8E3B46",
-  Arbutus        = "#6c5d9e",
-  Arctostaphylos = "#9d9cd5",
-  Calocedrus     = "#59385c",
-  Ceanothus      = "#2C7FB8",
-  Cercocarpus    = "#d8b847",
-  Eriogonum      = "#bf3729",
-  Heteromeles    = "#e69b00",
-  Malosma        = "#f5bb50",
-  Pinus          = "#ada43b",
-  Pseudotsuga    = "#355828",
-  Quercus        = "#D1495B",
-  Salvia         = "#d48f90",
-  Umbellularia   = "#d8b847"
-)
-
-# genus_colors <- c(
-#   Abies          = "#203A8F",  # sapphire
-#   Adenostoma     = "#6F2DBD",  # amethyst
-#   Arbutus        = "#1B7F5A",  # jade
-#   Arctostaphylos = "#B45F2A",  # terracotta
-#   Calocedrus     = "#2F2F2F",  # charcoal
-#   Ceanothus      = "#D1495B",  # raspberry
-#   Cercocarpus    = "#E6A23C",  # amber
-#   Eriogonum      = "#8E3B46",  # mulberry
-#   Heteromeles    = "#2C7FB8",  # steel blue
-#   Malosma        = "#7D9A44",  # olive
-#   Pinus          = "#2E6B3D",  # conifer green
-#   Pseudotsuga    = "#0F2E3F",  # deep teal/navy
-#   Quercus        = "#C97C5D",  # warm clay
-#   Salvia         = "#6D597A",  # dusty purple
-#   Umbellularia   = "#8C6D3F"   # bronze
-# )
-
-
-
-species_levels <- levels(plot_df$species)
-
-axis_y_cols <- diff_flag %>%
-  distinct(species, Genus) %>%
-  mutate(
-    Genus = ifelse(is.na(Genus) | Genus == "", "Unknown", Genus),
-    col   = unname(genus_colors[Genus]),
-    col   = ifelse(is.na(col), "grey30", col)
-  ) %>%
-  slice(match(species_levels, species)) %>%
-  pull(col)
-
-# ----------------------------
-# 7) Ridgeline posterior plot
-# ----------------------------
-p_slopes <- ggplot(plot_df, aes(x = slope, y = species, fill = diff_from_grand)) +
-  geom_vline(xintercept = 0, linetype = 2, linewidth = 0.4) +
-  geom_vline(xintercept = grand_med, linewidth = 0.6) +
-  geom_density_ridges(
-    scale = 2.2,
-    rel_min_height = 0.01,
-    alpha = 0.85,
-    color = NA
-  ) +
-  scale_fill_manual(values = c("grey60", "black")) +
-  xlim(-0.55, 0.275) +
-  labs(
-    x = expression("Posterior of species slope (ilfm ~ " * italic(Psi)[MD] * ")"),
-    y = NULL,
-    fill = NULL
-  ) +
-  theme_classic(base_size = 14) +
-  theme(axis.text.y = element_text(color = axis_y_cols),
-        legend.position = "top") + theme(
-    axis.text.y = element_text(
-      color = axis_y_cols,
-      face  = "bold",
-      size  = 11
-    )
-)
-
-ggsave(
-  filename = here("figures", "species_slope_posteriors_by_genus.png"),
-  plot     = p_slopes,
-  width    = 6,
-  height   = 5,
-  units    = "in",
-  dpi      = 300
-)
-```
-
-
-##### Not ridge plots: 
-```{r, eval = F}
-# slope_mat: matrix of posterior draws, columns = species slopes
-grand_draw <- rowMeans(slope_mat)  # one value per posterior draw
-grand_lo   <- quantile(grand_draw, 0.025)
-grand_hi   <- quantile(grand_draw, 0.975)
-grand_med  <- median(grand_draw)
-
-c(grand_lo = grand_lo, grand_med = grand_med, grand_hi = grand_hi)
-
-library(dplyr)
-library(ggplot2)
-library(forcats)
-
-# Summarize species slope CrIs from slope_mat
-forest_df <- tibble(species = colnames(slope_mat)) %>%
-  rowwise() %>%
-  mutate(
-    slope_med = median(slope_mat[, species]),
-    slope_lo  = quantile(slope_mat[, species], 0.025),
-    slope_hi  = quantile(slope_mat[, species], 0.975)
-  ) %>%
-  ungroup() %>%
-  mutate(
-    # use the UNWEIGHTED grand interval:
-    overlaps_grand = !(slope_hi < grand_lo | slope_lo > grand_hi),
-    species = fct_reorder(species, slope_med)
-  )
-
-ggplot(forest_df, aes(y = species, x = slope_med, color = overlaps_grand)) +
-  geom_vline(xintercept = grand_med, linetype = 2, linewidth = 0.4) +
-  geom_errorbarh(aes(xmin = slope_lo, xmax = slope_hi), height = 0, linewidth = 0.6) +
-  geom_point(size = 2.3) +
-  labs(
-    x = "Species slope of ilfm ~ mwp_z (posterior median ± 95% CrI)",
-    y = NULL
-  ) +
-  theme_classic(base_size = 14) + theme(legend.position = "none")
-
-```
-
-```{r, eval = F}
-# posterior draws of grand mean (same as you have)
-grand_draw <- rowMeans(slope_mat, na.rm = TRUE)
-
-# posterior probability each species is greater than the grand mean
-p_gt_grand <- apply(slope_mat, 2, function(x) mean(x > grand_draw, na.rm = TRUE))
-
-# two-sided probability of being different from grand (direction-agnostic)
-p_diff_grand <- 2 * pmin(p_gt_grand, 1 - p_gt_grand)
-
-# flag as "different" at 95% posterior probability (analog of p<0.05)
-diff_from_grand_95 <- p_diff_grand < 0.05
-
-forest_df <- forest_df %>%
-  mutate(
-    p_diff_grand = p_diff_grand[as.character(species)],
-    diff_from_grand_95 = diff_from_grand_95[as.character(species)]
-  )
-
-ggplot(forest_df, aes(y = species, x = slope_med, shape = diff_from_grand_95)) +
-  geom_vline(xintercept = median(grand_draw), linetype = 2, linewidth = 0.4) +
-  geom_errorbarh(aes(xmin = slope_lo, xmax = slope_hi), height = 0, linewidth = 0.6, color = "black") +
-  geom_point(size = 2.3, color = "black") +
-  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 1)) +  # filled = not different, open = different
-  labs(x = "Species slope of ilfm ~ mwp_z (posterior median ± 95% CrI)", y = NULL) +
-  theme_classic(base_size = 14) +
-  theme(legend.position = "none")
-
-```
-
-Color by leaf habit: 
-```{r, eval = F}
-forest_df1 <- forest_df %>%
-  left_join(table1_df, by = "species")
-
-leaf_colors <- c(
-  Ever = "#1b9e77",
-  Dec = "#d95f02",
-  "Semi-Dec" = "#7570b3"  # optional
-)
-
-
-forest_df2 <- forest_df %>%
-  left_join(table1_df, by = "species") %>%
-  mutate(
-    species_label = paste0(
-      "<span style='color:",
-      leaf_colors[as.character(dec_ever)],
-      "'>",
-      species,
-      "</span>"
-    ),
-    species = fct_reorder(species, slope_med)
-  )
-
-# IMPORTANT: named labels (names must match the factor levels in y)
-species_labels <- setNames(forest_df2$species_label, forest_df2$species)
-
-ggplot(
-  forest_df2,
-  aes(y = species, x = slope_med, shape = overlaps_grand)
-) +
-  geom_vline(xintercept = grand_med, linetype = 2, linewidth = 0.4) +
-  geom_errorbarh(
-    aes(xmin = slope_lo, xmax = slope_hi),
-    height = 0,
-    linewidth = 0.6,
-    color = "black"
-  ) +
-  geom_point(size = 2.3, color = "black") +
-  scale_shape_manual(values = c(`TRUE` = 16, `FALSE` = 1)) +
-  scale_y_discrete(labels = species_labels) +
-  labs(x = "Slope (posterior median ± 95% CrI)", y = NULL) +
-  theme_classic(base_size = 14) +
-  theme(
-    legend.position = "none",
-    axis.text.y = element_markdown()
-  )
-
-```
-Color by genus: 
-```{r, eval = F}
-forest_df1 <- forest_df %>%
-  left_join(table1_df, by = "species")
-
-family_colors <- c(
-  Pinaceae      = "darkgreen",
-  Cupressaceae  = "darkblue",
-  Fagaceae      = "#d95f02",
-  Rosaceae      = "#e7298a",
-  Ericaceae     = "#7570b3",
-  Lauraceae     = "#a6761d",
-  Rhamnaceae    = "#1f78b4",
-  Polygonaceae  = "#b2df8a",
-  Anacardiaceae = "#fb9a99",
-  Lamiaceae     = "#cab2d6"
-)
-
-library(dplyr)
-library(forcats)
-library(ggplot2)
-library(ggtext)
-
-forest_df2 <- forest_df %>%
-  left_join(table1_df, by = "species") %>%
-  mutate(
-    family = trimws(as.character(family)),
-    species_label = paste0(
-      "<span style='color:",
-      family_colors[family],
-      "'>",
-      species,
-      "</span>"
-    ),
-    # RECOMPUTE overlap here (must have grand_lo and grand_hi defined)
-    overlaps_grand = !(slope_hi < grand_lo | slope_lo > grand_hi),
-    # force to two-level factor so both shapes can appear
-    overlaps_grand = factor(overlaps_grand, levels = c(FALSE, TRUE)),
-    species = fct_reorder(species, slope_med)
-  )
-
-species_labels <- setNames(forest_df2$species_label, forest_df2$species)
-
-# quick check: do you actually have both TRUE and FALSE?
-table(forest_df2$overlaps_grand, useNA = "ifany")
-
-species_labels <- setNames(forest_df2$species_label, forest_df2$species)
-
-
-ggplot(forest_df2, aes(y = species, x = slope_med, shape = overlaps_grand)) +
-  geom_vline(xintercept = grand_med, linetype = 2, linewidth = 0.4) +
-  geom_errorbarh(aes(xmin = slope_lo, xmax = slope_hi),
-                 height = 0, linewidth = 0.6, color = "black") +
-  geom_point(size = 2.3, color = "black") +
-  scale_shape_manual(values = c(`FALSE` = 1, `TRUE` = 16), drop = FALSE) +
-  scale_y_discrete(labels = species_labels) +
-  labs(x = "Slope (posterior median ± 95% CrI)", y = NULL) +
-  theme_classic(base_size = 14) +
-  theme(legend.position = "none",
-        axis.text.y = element_markdown())
-
-```
-
-Add grand slope without the pinaceae or cade: 
-```{r}
-# --- Grand slope 1: all species (unweighted mean across species per draw) ---
-grand_draw_all <- rowMeans(slope_mat, na.rm = TRUE)
-grand_med_all  <- median(grand_draw_all)
-grand_lo_all   <- quantile(grand_draw_all, 0.025)
-grand_hi_all   <- quantile(grand_draw_all, 0.975)
-
-# --- Grand slope 2: exclude selected species ---
-exclude_spp <- c("PINJEF", "ABICON", "CALDEC", "PSEMEN")  # note: you wrote CADEC; your data uses CALDEC
-keep_cols <- setdiff(colnames(slope_mat), exclude_spp)
-
-grand_draw_excl <- rowMeans(slope_mat[, keep_cols, drop = FALSE], na.rm = TRUE)
-grand_med_excl  <- median(grand_draw_excl)
-grand_lo_excl   <- quantile(grand_draw_excl, 0.025)
-grand_hi_excl   <- quantile(grand_draw_excl, 0.975)
-
-
-forest_df2 <- forest_df %>%
-  left_join(table1_df, by = "species") %>%
-  mutate(
-    family = trimws(as.character(family)),
-    species_label = paste0(
-      "<span style='color:",
-      family_colors[family],
-      "'>",
-      species,
-      "</span>"
-    ),
-    # RECOMPUTE overlap here (must have grand_lo and grand_hi defined)
-    overlaps_grand = !(slope_hi < grand_lo_all | slope_lo > grand_hi_all),
-
-    # force to two-level factor so both shapes can appear
-    overlaps_grand = factor(overlaps_grand, levels = c(FALSE, TRUE)),
-    species = fct_reorder(species, slope_med)
-  ) %>%
-  mutate(
-    overlaps_grand_excl = !(slope_hi < grand_lo_excl | slope_lo > grand_hi_excl),
-    overlaps_grand_excl = factor(overlaps_grand_excl, levels = c(FALSE, TRUE))
-  )
-
-
-species_labels <- setNames(forest_df2$species_label, forest_df2$species)
-
-# quick check: do you actually have both TRUE and FALSE?
-table(forest_df2$overlaps_grand, useNA = "ifany")
-
-species_labels <- setNames(forest_df2$species_label, forest_df2$species)
-
-
-ggplot(forest_df2, aes(y = species, x = slope_med, shape = overlaps_grand)) +
-  geom_vline(xintercept = grand_med_all,  linetype = 2, linewidth = 0.4) +
-  geom_vline(xintercept = grand_med_excl, linetype = 3, linewidth = 0.4) +
-  geom_errorbarh(aes(xmin = slope_lo, xmax = slope_hi),
-                 height = 0, linewidth = 0.6, color = "black") +
-  geom_point(size = 2.3, color = "black") +
-  scale_shape_manual(values = c(`FALSE` = 1, `TRUE` = 16), drop = FALSE) +
-  scale_y_discrete(labels = species_labels) +
-  labs(x = "Slope (posterior median ± 95% CrI)", y = NULL) +
-  theme_classic(base_size = 14) +
-  theme(
-    legend.position = "none",
-    axis.text.y = element_markdown()
-  )
-
-ggplot(forest_df2, aes(y = species, x = slope_med)) +
-  geom_vline(xintercept = grand_med_all,  linetype = 2, linewidth = 0.4) +
-  geom_vline(xintercept = grand_med_excl, linetype = 3, linewidth = 0.4) +
-  geom_errorbarh(aes(xmin = slope_lo, xmax = slope_hi),
-                 height = 0, linewidth = 0.6, color = "black") +
-  geom_point(
-    aes(
-      shape = overlaps_grand,
-      color = overlaps_grand_excl
-    ),
-    size = 2.3,
-    stroke = 1.1,
-    fill = "white"   # so only outline color matters
-  ) +
-  scale_shape_manual(values = c(`FALSE` = 1, `TRUE` = 16), drop = FALSE) +
-  scale_color_manual(values = c(`FALSE` = "black", `TRUE` = "dodgerblue3"), drop = FALSE) +
-  scale_y_discrete(labels = species_labels) +
-  labs(x = "Slope (posterior median ± 95% CrI)", y = NULL) +
-  theme_classic(base_size = 14) +
-  theme(
-    legend.position = "none",
-    axis.text.y = element_markdown()
-  )
-
-```
-
-#Fig SX: Forest plot of intercepts: 
-
-```{r}
-# ============================================================
-# Fig: Species intercept posteriors (ridgelines), genus-colored axis labels
-#   - ordered by posterior MEAN (no genus blocking)
-#   - grand line = mean across species per draw
-#   - fill = "Different from grand" if 95% CrI of (intercept - grand) excludes 0
-# ============================================================
-
-library(tidybayes)
-library(dplyr)
-library(ggplot2)
-library(ggridges)
-library(forcats)
-library(stringr)
-
-# ----------------------------
-# 0) Genus lookup from SpCodes
-#    expects columns: SpCode6, Genus
-# ----------------------------
-genus_lookup <- SpCodes %>%
-  select(species = SpCode6, Genus) %>%
-  distinct() %>%
-  mutate(
-    Genus = trimws(as.character(Genus)),
-    Genus = ifelse(is.na(Genus) | Genus == "", "Unknown", Genus)
-  )
-
-# ----------------------------
-# 1) Extract posterior draws: species-specific intercepts
-# ----------------------------
-int_draws <- fit_spp_slopes %>%
-  gather_draws(`^b_species[^:]+$`, regex = TRUE) %>%
-  mutate(species = gsub("^b_species", "", .variable)) %>%
-  transmute(.draw, species, intercept = .value)
-
-# ----------------------------
-# 2) "Grand intercept" posterior (mean across species, per draw)
-# ----------------------------
-grand_draws <- int_draws %>%
-  group_by(.draw) %>%
-  summarise(grand_int = mean(intercept, na.rm = TRUE), .groups = "drop")
-
-grand_med <- median(grand_draws$grand_int)
-
-# ----------------------------
-# 3) Flag: different from grand if 95% CrI of (intercept - grand) excludes 0
-# ----------------------------
-diff_flag <- int_draws %>%
-  left_join(grand_draws, by = ".draw") %>%
-  mutate(diff = intercept - grand_int) %>%
-  group_by(species) %>%
-  summarise(
-    diff_lo = quantile(diff, 0),
-    diff_hi = quantile(diff, 1),
-    mean    = mean(intercept),
-    med     = median(intercept),
-    .groups = "drop"
-  ) %>%
-  mutate(diff_from_grand = !(diff_lo <= 0 & diff_hi >= 0)) %>%
-  left_join(genus_lookup, by = "species")
-
-# ----------------------------
-# 4) Ordering: by posterior MEAN only (no genus blocking)
-# ----------------------------
-species_order_top_to_bottom <- diff_flag %>%
-  arrange(desc(mean)) %>%
-  pull(species)
-
-species_levels_for_plot <- rev(species_order_top_to_bottom)  # ggplot puts last at top
-
-# ----------------------------
-# 5) Build plotting df
-# ----------------------------
-plot_df <- int_draws %>%
-  left_join(diff_flag %>% select(species, diff_from_grand, Genus), by = "species") %>%
-  mutate(
-    species = factor(species, levels = species_levels_for_plot),
-    diff_from_grand = factor(
-      diff_from_grand,
-      levels = c(FALSE, TRUE),
-      labels = c("Not different from grand", "Different from grand")
-    )
-  )
-
-# ----------------------------
-# 6) Axis text colors by Genus (your fixed mapping)
-# ----------------------------
-genus_colors <- c(
-  Abies          = "#17154f",
-  Adenostoma     = "#8E3B46",
-  Arbutus        = "#6c5d9e",
-  Arctostaphylos = "#9d9cd5",
-  Calocedrus     = "#59385c",
-  Ceanothus      = "#2C7FB8",
-  Cercocarpus    = "#d8b847",
-  Eriogonum      = "#bf3729",
-  Heteromeles    = "#e69b00",
-  Malosma        = "#f5bb50",
-  Pinus          = "#ada43b",
-  Pseudotsuga    = "#355828",
-  Quercus        = "#D1495B",
-  Salvia         = "#d48f90",
-  Umbellularia   = "#d8b847"
-)
-
-species_levels <- levels(plot_df$species)
-
-axis_y_cols <- diff_flag %>%
-  distinct(species, Genus) %>%
-  mutate(
-    Genus = ifelse(is.na(Genus) | Genus == "", "Unknown", Genus),
-    col   = unname(genus_colors[Genus]),
-    col   = ifelse(is.na(col), "grey30", col)
-  ) %>%
-  slice(match(species_levels, species)) %>%
-  pull(col)
-
-# ----------------------------
-# 7) Choose x-limits from the posterior (prevents hard-coding)
-# ----------------------------
-x_lo <- quantile(plot_df$intercept, 0.00, na.rm = TRUE)
-x_hi <- quantile(plot_df$intercept, 1, na.rm = TRUE)
-
-# ----------------------------
-# 8) Ridgeline posterior plot (INTERCEPTS)
-# ----------------------------
-p_intercepts <- ggplot(plot_df, aes(x = intercept, y = species, fill = diff_from_grand)) +
-  geom_vline(xintercept = 0, linetype = 2, linewidth = 0.4) +
-  geom_vline(xintercept = grand_med, linewidth = 0.6) +
-  geom_density_ridges(
-    scale = 2.2,
-    rel_min_height = 0.01,
-    alpha = 0.85,
-    color = NA
-  ) +
-  scale_fill_manual(values = c("grey60", "black")) +
-  coord_cartesian(xlim = c(x_lo, x_hi)) +
-  labs(
-    x = "Posterior of species intercept (ilfm at mean-scaled ΨMD)",
-    y = NULL,
-    fill = NULL
-  ) +
-  theme_classic(base_size = 14) +
-  theme(
-    legend.position = "top",
-    axis.text.y = element_text(color = axis_y_cols, face = "bold", size = 11)
-  )
-
-p_intercepts
-
-ggsave(
-  filename = here("figures", "species_intercept_posteriors_by_genus.png"),
-  plot     = p_intercepts,
-  width    = 6,
-  height   = 5,
-  units    = "in",
-  dpi      = 300
-)
-
-```
-
-#Predict:
+#Concept dataframes:
 
 ```{r}
 library(dplyr)
-library(broom)
 library(tidyr)
 library(purrr)
+library(lme4)
+library(broom.mixed)   # tidy() for lmerMod
+library(janitor)
+library(readr)
+library(here)
 
+# ============================
 # Fit the models
-mod_common_slope <- glm(ilfm ~ mwp + species, data = df1, family = gaussian)
-mod_species_interaction <- glm(ilfm ~ mwp * species, data = df1, family = gaussian)
-mod_species_study <- glm(ilfm ~ mwp * sp_site, data = df1, family = gaussian)
+#   - FIRST TWO are mixed models with random intercept for study
+# ============================
 
-# Helper to extract coefficients and label the model
+# 1) Common slope across species (different intercepts by species) + (1|study)
+mod_common_slope <- lmer(ilfm ~ mwp + species + (1 | study), data = df1, REML = FALSE)
+
+# 2) Species-specific slopes (mwp * species) + (1|study)
+mod_species_interaction <- lmer(ilfm ~ mwp * species + (1 | study), data = df1, REML = FALSE)
+
+# 3) Species x study interaction model (kept as fixed-effects model, as in your original)
+#    (If you *also* want this mixed, tell me what random structure you want here.)
+mod_species_study <- lm(ilfm ~ mwp * sp_site, data = df1)
+
+# ----------------------------
+# Helper to extract coefficients + label model
+# ----------------------------
 extract_model_info <- function(model, model_name) {
-  tidy(model) %>%
+  broom.mixed::tidy(model, effects = "fixed") %>%
     mutate(model = model_name)
 }
 
-# Combine all model coefficients
 model_coeffs <- bind_rows(
-  extract_model_info(mod_common_slope, "common_slope"),
-  extract_model_info(mod_species_interaction, "species_interaction"),
+  extract_model_info(mod_common_slope, "common_slope_reStudy"),
+  extract_model_info(mod_species_interaction, "species_interaction_reStudy"),
   extract_model_info(mod_species_study, "species_site_interaction")
 )
 
-# Utility to get baseline level of factor variable (alphabetical if not set)
+# ----------------------------
+# Baseline level of factor variable (alphabetical unless you set levels)
+# ----------------------------
 baseline_level <- function(var) levels(factor(var))[1]
 
-# Function to compute slope and intercept per group
-compute_group_terms <- function(model, group_var, model_type) {
+# ----------------------------
+# Compute slope + intercept per group (fixed-effects part)
+#   Works for lm/glm/lmer by using fixef() when available
+# ----------------------------
+get_fixef <- function(model) {
+  if (inherits(model, "lmerMod")) return(lme4::fixef(model))
+  return(stats::coef(model))
+}
+
+# robust term lookup for interaction naming (either "mwp:speciesX" or "speciesX:mwp")
+get_term <- function(beta, term1, term2 = NULL) {
+  if (term1 %in% names(beta)) return(unname(beta[[term1]]))
+  if (!is.null(term2) && term2 %in% names(beta)) return(unname(beta[[term2]]))
+  return(0)
+}
+
+compute_group_terms <- function(model, group_var, model_type, slope_var = "mwp") {
+  beta <- get_fixef(model)
+
   group_list <- unique(df1[[group_var]])
   base_group <- baseline_level(df1[[group_var]])
 
   map_dfr(group_list, function(grp) {
-    # Start with base intercept and slope
-    intercept <- coef(model)[["(Intercept)"]]
-    slope <- coef(model)[["mwp"]]
+
+    # base intercept + slope
+    intercept <- unname(beta[["(Intercept)"]])
+    slope     <- unname(beta[[slope_var]])
 
     if (grp != base_group) {
-      int_term <- paste0(group_var, grp)
-      slope_term <- paste0("mwp:", group_var, grp)
 
-      if (int_term %in% names(coef(model))) {
-        intercept <- intercept + coef(model)[[int_term]]
-      }
+      # main effect for group (intercept shift)
+      int_term <- paste0(group_var, grp)   # e.g., "speciesABICON"
+      intercept <- intercept + get_term(beta, int_term)
 
-      if (slope_term %in% names(coef(model))) {
-        slope <- slope + coef(model)[[slope_term]]
-      }
+      # interaction for slope shift
+      # possible names: "mwp:speciesABICON" OR "speciesABICON:mwp"
+      slope_term1 <- paste0(slope_var, ":", group_var, grp)
+      slope_term2 <- paste0(group_var, grp, ":", slope_var)
+      slope <- slope + get_term(beta, slope_term1, slope_term2)
     }
 
     tibble(
@@ -2475,45 +1339,62 @@ compute_group_terms <- function(model, group_var, model_type) {
   })
 }
 
+# ----------------------------
 # Get results for each model
-coefs_common <- compute_group_terms(mod_common_slope, "species", "common_slope") %>% rename(species = group)
+# ----------------------------
+coefs_common <- compute_group_terms(
+  mod_common_slope, "species", "common_slope_reStudy"
+) %>% rename(species = group)
 
-coefs_species_int <- compute_group_terms(mod_species_interaction, "species", "species_interaction") %>% rename(species = group)
+coefs_species_int <- compute_group_terms(
+  mod_species_interaction, "species", "species_interaction_reStudy"
+) %>% rename(species = group)
 
-coefs_species_study <- compute_group_terms(mod_species_study, "sp_site", "species_site_interaction") %>% rename(sp_study = group)%>% 
-  separate_wider_delim(sp_study, names = c("species", "study"), "_") 
-  
+coefs_species_study <- compute_group_terms(
+  mod_species_study, "sp_site", "species_site_interaction"
+) %>%
+  rename(sp_study = group) %>%
+  separate_wider_delim(sp_study, names = c("species", "study"), delim = "_")
 
+# ----------------------------
 # Combine into one dataframe
-coef_compare_df  <- bind_rows(coefs_common, coefs_species_int, coefs_species_study) %>% 
+# ----------------------------
+coef_compare_df <- bind_rows(coefs_common, coefs_species_int, coefs_species_study) %>%
   mutate(group = case_when(
-    model %in% c("species_interaction") ~ "species",
-    model %in% c("common_slope") ~ "grand",
-    model %in% c("species_site_interaction") ~ "sp_study",
-  )) %>% 
+    model == "species_interaction_reStudy" ~ "species",
+    model == "common_slope_reStudy"        ~ "grand",
+    model == "species_site_interaction"    ~ "sp_study",
+    TRUE ~ NA_character_
+  )) %>%
   select(-study)
 
-range(coefs_species_int$slope)
+range(coefs_species_int$slope, na.rm = TRUE)
 
-#Make unique dataframes per analysis with spp info
-concept_both_df <- merge(coef_compare_df, df1, by = c("species"), all = T) %>% 
-  filter(!(model == "species_site_interaction")) %>% 
-  merge(sp_info) %>% 
+# ----------------------------
+# Make unique dataframes per analysis with spp info
+# ----------------------------
+concept_both_df <- merge(coef_compare_df, df1, by = c("species"), all = TRUE) %>%
+  filter(model != "species_site_interaction") %>%
+  merge(sp_info) %>%
   clean_names()
 
-concept_study_df <- merge(coef_compare_df, df1, by = c("species"), all = T) %>% 
-  filter(model == "species_site_interaction")  %>% 
-  merge(sp_info)%>% 
+concept_study_df <- merge(coef_compare_df, df1, by = c("species"), all = TRUE) %>%
+  filter(model == "species_site_interaction") %>%
+  merge(sp_info) %>%
   clean_names()
 
-concept_df_all <- bind_rows(concept_both_df, concept_study_df)  %>% 
-  clean_names() %>% 
-  write_csv(here::here("data", "concept_df.csv"))
+concept_df_all <- bind_rows(concept_both_df, concept_study_df) %>%
+  clean_names()
 
-concept_df <- concept_df_all %>% 
-  filter(group == "grand")  %>% 
+write_csv(concept_df_all, here::here("data", "concept_df.csv"))
+
+concept_df <- concept_df_all %>%
+  filter(group == "grand") %>%
   clean_names()
 ```
+
+
+#Predict:
 
 predict with species-specific slope:
 ```{r, predict}
@@ -2581,9 +1462,7 @@ ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = sp_site)) +
   ) +
   theme_minimal()
 ```
-
 Predict with common slope:
-
 ```{r, predict}
 #-----------
 # Predict water potential (mwp) for each sp_site
@@ -2620,6 +1499,7 @@ ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = species,
 ```
 
 #Model figs (Fig 3)
+
 #####Figure 3. (models)
 ```{r, fig.height=5, fig.width=7}
 # Define color palette for sites (color-blind friendly)
@@ -2633,7 +1513,7 @@ color_manual <- scale_color_manual(values  = c(
 species_thresholds <- concept_both_df %>%
   filter(group == "grand") %>%
   group_by(species) %>%
-  summarise(min_mwp = max(mwp, na.rm = TRUE), .groups = "drop")
+  summarise(min_mwp = max(mwp, na.rm = TRUE), .groups = "drop") 
 
 # Generate model-predicted lines for each species and study
 model_lines <- concept_df %>%
@@ -2700,9 +1580,6 @@ ggsave(plot = fig3, here::here("figures", "fig3.jpg"), dpi = 600, height = 4, wi
 
 
 ```{r, figure1}
-
-
-
 # Generate model-predicted lines for each species
 model_lines <- concept_df %>%
   filter(group == "grand") %>% 
@@ -2772,7 +1649,11 @@ ggsave(plot = fig3.1, here::here("figures", "figSX_species.jpg"), dpi = 600, hei
 
 ```{r}
 concept_slopes_df <- concept_both_df %>%
-  filter(group == "species")
+  filter(group == "species") %>% 
+  mutate(functional_type = case_when(
+    functional_type %in% c("angiosperm") ~ "Angiosperm",
+    functional_type %in% c("gymnosperm") ~ "Gymnosperm",
+  ))
 
 # Model-predicted lines per species (but we will COLOR by functional_type)
 model_lines <- concept_slopes_df %>%
@@ -2800,16 +1681,16 @@ model_lines <- concept_slopes_df %>%
 
 # ---- Panel A: iLFM ----
 figSXa <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = ilfm)) +
-  geom_point(aes(color = functional_type), alpha = 0.4) +
+  geom_point(aes(color = functional_type), alpha = 1, size= 1) +
   # 1) Angiosperm lines (drawn first, underneath)
   geom_line(
-    data = dplyr::filter(model_lines, functional_type == "angiosperm"),
+    data = dplyr::filter(model_lines, functional_type == "Angiosperm"),
     aes(x = -1*mwp, y = ilfm_pred, color = functional_type, group = species),
     linewidth = 0.5
   ) +
   # 2) Gymnosperm lines (drawn second, on top)
   geom_line(
-    data = dplyr::filter(model_lines, functional_type == "gymnosperm"),
+    data = dplyr::filter(model_lines, functional_type == "Gymnosperm"),
     aes(x = -1*mwp, y = ilfm_pred, color = functional_type, group = species),
     linewidth = 0.5
   ) +
@@ -2821,39 +1702,39 @@ figSXa <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = ilfm)) +
   theme(legend.position = "none") +
   scale_color_manual(
   values = c(
-    "angiosperm" = "#E69F00",  # orange
-    "gymnosperm" = "#0072B2"   # blue
+    "Angiosperm" = "#E69F00",  # orange
+    "Gymnosperm" = "#0072B2"   # blue
   )
 )
 
 # ---- Panel B: LFM ----
 figSXb <- ggplot(concept_slopes_df, aes(x = -1 * mwp, y = lfm)) +
-  geom_point(aes(color = functional_type), alpha = 0.4) +
+  geom_point(aes(color = functional_type), alpha = 1, size = 1) +
   geom_line(
     data = model_lines,
     aes(x = -1 * mwp, y = 1 / ilfm_pred, color = functional_type, group = species),
     linewidth = 0.5
   ) +
   geom_line(
-    data = dplyr::filter(model_lines, functional_type == "angiosperm"),
+    data = dplyr::filter(model_lines, functional_type == "Angiosperm"),
     aes(x = -1*mwp, y = 1/ilfm_pred, color = functional_type, group = species),
     linewidth = 0.5
   ) +
   geom_line(
-    data = dplyr::filter(model_lines, functional_type == "gymnosperm"),
+    data = dplyr::filter(model_lines, functional_type == "Gymnosperm"),
     aes(x = -1*mwp, y = 1/ilfm_pred, color = functional_type, group = species),
     linewidth = 0.5
   ) +
   labs(
     x = "Water Potential (MWP)",
     y = "LFM",
-    color = "Functional type"
+    color = "Functional Type"
   ) +
   theme(legend.position = "none") +
   scale_color_manual(
   values = c(
-    "angiosperm" = "#E69F00",  # orange
-    "gymnosperm" = "#0072B2"   # blue
+    "Angiosperm" = "#E69F00",  # orange
+    "Gymnosperm" = "#0072B2"   # blue
   )
 )
 
@@ -2866,8 +1747,8 @@ legend <- cowplot::get_legend(
     theme_minimal() +
     scale_color_manual(
   values = c(
-    "angiosperm" = "#E69F00",  # orange
-    "gymnosperm" = "#0072B2"   # blue
+    "Angiosperm" = "#E69F00",  # orange
+    "Gymnosperm" = "#0072B2"   # blue
   )
 )
   # + your_functional_type_scale_here
@@ -3059,6 +1940,152 @@ ggsave(
 )
 
 ```
+##Figure S1., selected species****
+
+```{r}
+color_species_selected <- scale_color_manual(
+  values = c(
+     ABICON = "#5b859e",
+     ADEFAS = "#2f357c",
+    # ARBMEN = "#6c5d9e",
+    # 
+    # ARCGLA = "#9d9cd5",
+    # ARCPAT = "#b0799a",
+     CALDEC = "#59385c",
+    # CEACUN = "#f6b3b0",
+    # 
+    #  CEACOR = "#f6b3e0",
+     CEAPAR = "#b38711",
+    # CEASPI = "#e48171",
+    # CERBET = "#d8b847",
+    # 
+     ERIFAS = "#bf3729",
+     HETARB = "#e69b00",
+    # 
+     MALLAU = "#f5bb50",
+     PINJEF = "#ada43b",
+    # PSEMEN = "#355828",
+    # 
+    # QUEAGR = "#5b859e",
+    # QUEBER = "#1e395f",
+    # QUEDOU = "#75884b",
+    # 
+      QUEDUR = "#1e5a46",
+    # QUEGAR = "#df8d71",
+    # QUEKEL = "#af4f2f",
+    # 
+     SALLEU = "#d48f90",
+    # SALMEL = "#732f30",
+     UMBCAL = "#d8b847"
+  ),
+  drop = FALSE
+)
+
+####Figure S1., colored by species
+concept_slopes_df <- concept_both_df %>%
+  filter(group == "species") %>% 
+  filter(sp_code6 %in% c("PINJEF", #SEKI
+                         #"QUEAGR", #sedgwick
+                         "QUEDUR",
+                         "SALLEU",
+                         "ABICON",
+                         "CEAPAR",
+                         "ERIFAS",
+                        "UMBCAL",
+                        "CALDEC",
+                        "MALLAU",
+                        "HETARB",
+                        "ARCGLA",
+                        "ADEFAS"
+                         ))
+
+# Generate model-predicted lines for each species
+model_lines <- concept_slopes_df  %>% 
+  merge(table1_df)%>% 
+  distinct(species, intercept, slope, family)  %>%
+  left_join(
+    concept_slopes_df %>%
+      group_by(species) %>%
+      summarise(
+        abs_min = min(abs(mwp), na.rm = TRUE),
+        abs_max = max(abs(mwp), na.rm = TRUE),   # <-- cap at highest absolute value
+        sign_mwp = sign(stats::median(mwp, na.rm = TRUE)),
+        .groups = "drop"
+      ) %>%
+      mutate(sign_mwp = if_else(sign_mwp == 0, -1, sign_mwp)), # fallback if median==0
+    by = "species"
+  ) %>%
+  rowwise() %>%
+  mutate(abs_mwp = list(seq(abs_min, abs_max, length.out = 100))) %>%
+  tidyr::unnest(abs_mwp) %>%
+  ungroup() %>%
+  mutate(
+    mwp = sign_mwp * abs_mwp,
+    ilfm_pred = intercept + slope * mwp
+  ) 
+
+# Scatter plot of ilfm vs mwp with model lines
+figSXa <- ggplot(concept_slopes_df , aes(x = mwp, y = ilfm)) +
+  geom_point(aes(color = species), alpha = 0.8, size = .7) +  # Scatter points colored by species
+  geom_line(data = model_lines, aes(x = mwp, y = ilfm_pred, color = species), size = 0.5) +  # Model lines colored by study
+  labs(
+   # x = "Water Potential (MWP)",
+    y = "iLFM",
+   # title = "Model fits with species intercept and slope",
+    color = "Study"
+  ) +
+  color_species_selected + 
+   labs(
+    x = expression(Psi[MDmin]~"(MPa)"),
+    y = "1/LFM",
+    #title = "Model fits with species intercept and slope",
+    color = "Study"
+  ) +
+  theme(legend.position = "false") +
+  scale_x_reverse()
+
+# Scatter plot of ilfm vs mwp with model lines
+figSXb <- ggplot(concept_slopes_df , aes(x = mwp, y = lfm*100)) +
+  geom_point(aes(color = species), alpha = 0.8, size = .7) +  # Scatter points colored by species
+  geom_line(data = model_lines, aes(x = mwp, y = 100*(1/ilfm_pred), color = species), size = .5) +  # Model lines colored by study
+  #theme_minimal() +
+  color_species_selected + 
+  theme(legend.position = "false", 
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank()) +
+  scale_x_reverse() +
+  labs (y = "LFM (%)")
+
+
+# Extract legend
+legend <- cowplot::get_legend(
+  ggplot(concept_df %>%
+    filter(group == "grand"), aes(x = mwp, y = lfm)) +
+    geom_line(data = model_lines_solid, aes(x = mwp, y = 1 / ilfm_pred, color = species, group = interaction(species, study)), size = 0.5) +
+    labs(color = "Species") +
+     theme_minimal() +
+    color_species_selected
+) 
+
+# Combine plots
+figSX <- cowplot::plot_grid(figSXb, figSXa, nrow = 2, rel_heights = c(.8, 1))
+figSX
+figSX <- cowplot::plot_grid(figSX, legend, nrow = 1, rel_widths = c(1, 0.25)) +
+  cowplot::draw_plot_label(
+    label = c("A", "B"),
+    x = c(0.1, 0.1),
+    y = c(0.98, 0.54
+          ),
+    size = 16,
+    fontface = "bold"
+  )
+figSX
+
+
+ggsave(plot = figSX, here::here("figures", "figSX_selectspp.jpg"), dpi = 600, height = 4, width = 5, units = "in")
+```
+
+
 
 ####Figure S1., colored by species
 ```{r, figure1}
@@ -3094,15 +2121,11 @@ model_lines <- concept_slopes_df  %>%
 figSXa <- ggplot(concept_slopes_df , aes(x = -1*mwp, y = ilfm)) +
   geom_point(aes(color = species), alpha = 0.5) +  # Scatter points colored by species
   geom_line(data = model_lines, aes(x = -1*mwp, y = ilfm_pred, color = species), size = 0.5) +  # Model lines colored by study
-  labs(
-    x = "Water Potential (MWP)",
-    y = "iLFM",
-   # title = "Model fits with species intercept and slope",
-    color = "Study"
-  ) +
   color_species + 
   #theme_minimal() +
-  theme(legend.position = "false")
+  theme(legend.position = "false",
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank())
 
 # Scatter plot of ilfm vs mwp with model lines
 figSXb <- ggplot(concept_slopes_df , aes(x = -1*mwp, y = lfm)) +

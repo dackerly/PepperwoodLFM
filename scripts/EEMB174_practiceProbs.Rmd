@@ -1,0 +1,158 @@
+---
+title: "Untitled"
+author: "Indra Boving"
+date: "2026-02-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Chapter 2: Small worlds and large worlds
+
+2E1. 
+Which of the expressions below correspond to the statement: the probability of rain on Monday?  (1) Pr(rain) (2) Pr(rain|Monday) (3) Pr(Monday|rain) (4) Pr(rain, Monday)/ Pr(Monday)  
+
+2E2. Which of the following statements corresponds to the expression: Pr(Monday|rain)?  (1) The probability of rain on Monday. (2) The probability of rain, given that it is Monday. (3) The probability that it is Monday, given that it is raining. (4) The probability that it is Monday and that it is raining.  
+
+2E3. Which of the expressions below correspond to the statement: the probability that it is Monday, given that it is raining?  (1) Pr(Monday|rain) (2) Pr(rain|Monday) (3) Pr(rain|Monday) Pr(Monday) (4) Pr(rain|Monday) Pr(Monday)/ Pr(rain) (5) Pr(Monday|rain) Pr(rain)/ Pr(Monday)
+
+
+2E4. The Bayesian statistician Bruno de Finetti (1906–1985) began his book on probability theory with the declaration: “PROBABILITY DOES NOT EXIST.” The capitals appeared in the original, so I imagine de Finetti wanted us to shout this statement. What he meant is that probability is a device for describing uncertainty from the perspective of an observer with limited knowledge; it has no objective reality. Discuss the globe tossing example from the chapter, in light of this statement. What does it mean to say “the probability of water is 0.7”?  Medium.  
+
+2M1. Recall the globe tossing model from the chapter. Compute and plot the grid approximate posterior distribution for each of the following sets of observations. In each case, assume a uniform prior for p.  (1) W, W, W (2) W, W, W, L (3) L, W, W, L, W, W, W  
+
+
+2M2. Now assume a prior for p that is equal to zero when p < 0.5 and is a positive constant when p ≥ 0.5. Again compute and plot the grid approximate posterior distribution for each of the sets of observations in the problem just above.  
+
+2M3. Suppose there are two globes, one for Earth and one for Mars. The Earth globe is 70% covered in water. The Mars globe is 100% land. Further suppose that one of these globes—you don’t know which—was tossed in the air and produced a “land” observation. Assume that each globe was equally likely to be tossed. Show that the posterior probability that the globe was the Earth, conditional on seeing “land” (Pr(Earth|land)), is 0.23.  
+
+2M4. Suppose you have a deck with only three cards. Each card has two sides, and each side is either black or white. One card has two black sides. The second card has one black and one white side. The third card has two white sides. Now suppose all three cards are placed in a bag and shuffled. Someone reaches into the bag and pulls out a card and places it flat on a table. A black side is shown facing up, but you don’t know the color of the side facing down. Show that the probability that the other side is also black is 2/3. Use the counting method (Section 2 of the chapter) to approach this problem. This means counting up the ways that each card could produce the observed data (a black side facing up on the table).  
+
+2M5. Now suppose there are four cards: B/B, B/W, W/W, and another B/B. Again suppose a card is drawn from the bag and a black side appears face up. Again calculate the probability that the other side is black.  
+
+2M6. Imagine that black ink is heavy, and so cards with black sides are heavier than cards with white sides. As a result, it’s less likely that a card with black sides is pulled from the bag. So again assume there are three cards: B/B, B/W, and W/W. After experimenting a number of times, you conclude that for every way to pull the B/B card from the bag, there are 2 ways to pull the B/W card and 3 ways to pull the W/W card. Again suppose that a card is pulled and a black side appears face up. Show that the probability the other side is black is now 0.5. Use the counting method, as before.  
+
+2M7. Assume again the original card problem, with a single card showing a black side face up. Before looking at the other side, we draw another card from the bag and lay it face up on the table. The face that is shown on the new card is white. Show that the probability that the first card, the one showing a black side, has black on its other side is now 0.75. Use the counting method, if you can. Hint: Treat this like the sequence of globe tosses, counting all the ways to see each observation, for each possible first card.  
+
+
+2H1. Suppose there are two species of panda bear. Both are equally common in the wild and live in the same places. They look exactly alike and eat the same food, and there is yet no genetic assay capable of telling them apart. They differ however in their family sizes. Species A gives birth to twins 10% of the time, otherwise birthing a single infant. Species B births twins 20% of the time, otherwise birthing singleton infants. Assume these numbers are known with certainty, from many years of field research. Now suppose you are managing a captive panda breeding program. You have a new female panda of unknown species, and she has just given birth to twins. What is the probability that her next birth will also be twins?  
+ 
+2H2. Recall all the facts from the problem above. Now compute the probability that the panda we have is from species A, assuming we have observed only the first birth and that it was twins.  
+ 
+ 2H3. Continuing on from the previous problem, suppose the same panda mother has a second birth and that it is not twins, but a singleton infant. Compute the posterior probability that this panda is species A.  
+ 
+ 2H4. A common boast of Bayesian statisticians is that Bayesian inference makes it easy to use all of the data, even if the data are of different types. So suppose now that a veterinarian comes along who has a new genetic test that she claims can identify the species of our mother panda. But the test, like all tests, is imperfect. This is the information you have about the test:  
+ • The probability it correctly identifies a species A panda is 0.8. 
+ 
+ • The probability it correctly identifies a species B panda is 0.65. 
+ 
+ The vet administers the test to your panda and tells you that the test is positive for species A. First ignore your previous information from the births and compute the posterior probability that your panda is species A. Then redo your calculation, now using the birth data as well.
+ 
+#Chapter 3: Sampling the imaginarey: 
+
+
+Easy. These problems use the samples from the posterior distribution for the globe tossing example. This code will give you a specific set of samples, so that you can check your answers exactly.  
+
+R code  3.27  p_grid <- seq( from=0 , to=1 , length.out=1000 ) prior <- rep( 1 , 1000 ) likelihood <- dbinom( 6 , size=9 , prob=p_grid ) posterior <- likelihood * prior posterior <- posterior / sum(posterior) set.seed(100) samples <- sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )  
+
+Use the values in samples to answer the questions that follow.  
+
+3E1. How much posterior probability lies below p = 0.2?  
+
+3E2. How much posterior probability lies above p = 0.8?  
+
+3E3. How much posterior probability lies between p = 0.2 and p = 0.8? 
+
+3E4. 20% of the posterior probability lies below which value of p? 
+
+3E5. 20% of the posterior probability lies above which value of p?  
+
+3E6. Which values of p contain the narrowest interval equal to 66% of the posterior probability?  
+
+3E7. Which values of p contain 66% of the posterior probability, assuming equal posterior probability both below and above the interval?  
+
+Medium.  
+
+3M1. Suppose the globe tossing data had turned out to be 8 water in 15 tosses. Construct the posterior distribution, using grid approximation. Use the same flat prior as before.  
+
+3M2. Draw 10,000 samples from the grid approximation from above. Then use the samples to calculate the 90% HPDI for p.  
+
+3M3. Construct a posterior predictive check for this model and data. This means simulate the distribution of samples, averaging over the posterior uncertainty in p. What is the probability of observing 8 water in 15 tosses?  
+
+3M4. Using the posterior distribution constructed from the new (8/15) data, now calculate the probability of observing 6 water in 9 tosses.  
+
+3M5. Start over at 3M1, but now use a prior that is zero below p = 0.5 and a constant above p = 0.5. This corresponds to prior information that a majority of the Earth’s surface is water. Repeat each problem above and compare the inferences. What difference does the better prior make? If it helps, compare inferences (using both priors) to the true value p = 0.7.
+
+
+3M6. Suppose you want to estimate the Earth’s proportion of water very precisely. Specifically, you want the 99% percentile interval of the posterior distribution of p to be only 0.05 wide. This means the distance between the upper and lower bound of the interval should be 0.05. How many times will you have to toss the globe to do this? 
+
+Hard.  Introduction. 
+The practice problems here all use the data below. These data indicate the gender (male=1, female=0) of officially reported first and second born children in 100 two-child families. 
+```{r}
+birth1 <- c(1,0,0,0,1,1,0,1,0,1,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1,0,  0,0,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,1,0,0,1,1,0,1,0,0,0,0,0,0,0, 1,1,0,1,0,0,1,0,0,0,1,0,0,1,1,1,1,0,1,0,1,1,1,1,1,0,0,1,0,1,1,0, 1,0,1,1,1,0,1,1,1,1) birth2 <- c(0,1,0,1,0,1,1,1,0,0,1,1,1,1,1,0,0,1,1,1,0,0,1,1,1,0, 1,1,1,0,1,1,1,0,1,0,0,1,1,1,1,0,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,0,1,1,0,1,1,0,1,1,1,0,0,0,0,0,0,1,0,0,0,1,1,0,0,1,0,0,1,1, 0,0,0,1,1,1,0,0,0,0)  
+```
+
+
+
+So for example, the first family in the data reported a boy (1) and then a girl (0). The second family reported a girl (0) and then a boy (1). The third family reported two girls. 
+
+You can load these two vectors into R’s memory by typing:  
+
+```{r}
+library(rethinking)  
+data(homeworkch3) 
+#So for example to compute the total number of boys born across all of these births, you could use:
+library(rethinking)  data(homeworkch3) 
+```
+
+3H1. Using grid approximation, compute the posterior distribution for the probability of a birth being a boy. Assume a uniform prior probability. Which parameter value maximizes the posterior probability?  
+
+3H2. Using the sample function, draw 10,000 random parameter values from the posterior distribution you calculated above. Use these samples to estimate the 50%, 89%, and 97% highest posterior density intervals.  
+
+3H3. Use rbinom to simulate 10,000 replicates of 200 births. You should end up with 10,000 numbers, each one a count of boys out of 200 births. Compare the distribution of predicted numbers of boys to the actual count in the data (111 boys out of 200 births). There are many good ways to visualize the simulations, but the dens command (part of the rethinking package) is probably the easiest way in this case. Does it look like the model fits the data well? That is, does the distribution of predictions include the actual observation as a central, likely outcome?  
+
+3H4. Now compare 10,000 counts of boys from 100 simulated first borns only to the number of boys in the first births, birth1. How does the model look in this light?
+
+
+3H5. The model assumes that sex of first and second births are independent. To check this assumption, focus now on second births that followed female first borns. Compare 10,000 simulated counts of boys to only those second births that followed girls. To do this correctly, you need to count the number of first borns who were girls and simulate that many births, 10,000 times. Compare the counts of boys in your simulations to the actual observed count of boys following girls. How does the model look in this light? Any guesses what is going on in these data?
+```{r}
+
+```
+
+#Chapter 4:Geocentric models: 
+
+4E1. In the model definition below, which line is the likelihood?  yi ∼ Normal(μ, σ)  μ ∼ Normal(0, 10)  σ ∼ Exponential(1)  
+
+4E2. In the model definition just above, how many parameters are in the posterior distribution?
+124 4. GEOCENTRIC MODELS  
+
+4E3. Using the model definition above, write down the appropriate form of Bayes’ theorem that includes the proper likelihood and priors.  
+
+4E4. In the model definition below, which line is the linear model?  yi ∼ Normal(μ, σ)  μi = α + βxi  α ∼ Normal(0, 10)  β ∼ Normal(0, 1)  σ ∼ Exponential(2)  
+
+4E5. In the model definition just above, how many parameters are in the posterior distribution?  Medium.  
+
+4M1. For the model definition below, simulate observed y values from the prior (not the posterior).  yi ∼ Normal(μ, σ)  μ ∼ Normal(0, 10)  σ ∼ Exponential(1)  
+
+4M2. Translate the model just above into a quap formula.  
+
+4M3. Translate the quap model formula below into a mathematical model definition.  flist <- alist( y ~ dnorm( mu , sigma ), mu <- a + b*x, a ~ dnorm( 0 , 10 ), b ~ dunif( 0 , 1 ), sigma ~ dexp( 1 ) )  
+
+4M4. A sample of students is measured for height each year for 3 years. After the third year, you want to fit a linear regression predicting height using year as a predictor. Write down the mathematical model definition for this regression, using any variable names and priors you choose. Be prepared to defend your choice of priors.  4M5. Now suppose I remind you that every student got taller each year. Does this information lead you to change your choice of priors? How?  4M6. Now suppose I tell you that the variance among heights for students of the same age is never more than 64cm. How does this lead you to revise your priors?  
+
+Hard.  
+
+4H1. The weights listed below were recorded in the !Kung census, but heights were not recorded for these individuals. Provide predicted heights and 89% intervals for each of these individuals. That is, fill in the table below, using model-based predictions.  
+Individual weight expected height 89% interval 1 46.95 2 43.72 3 64.78 4 32.59 5 54.63
+
+4H2. Select out all the rows in the Howell1 data with ages below 18 years of age. If you do it right, you should end up with a new data frame with 192 rows in it.  (a) Fit a linear regression to these data, using quap. Present and interpret the estimates. For every 10 units of increase in weight, how much taller does the model predict a child gets?  (b) Plot the raw data, with height on the vertical axis and weight on the horizontal axis. Superimpose the MAP regression line and 89% interval for the mean. Also superimpose the 89% interval for predicted heights.  (c) What aspects of the model fit concern you? Describe the kinds of assumptions you would change, if any, to improve the model. You don’t have to write any new code. Just explain what the model appears to be doing a bad job of, and what you hypothesize would be a better model.  
+
+4H3. Suppose a colleague of yours, who works on allometry, glances at the practice problems just above. Your colleague exclaims, “That’s silly. Everyone knows that it’s only the logarithm of body weight that scales with height!” Let’s take your colleague’s advice and see what happens.  
+
+(a) Model the relationship between height (cm) and the natural logarithm of weight (log-kg). Use the entire Howell1 data frame, all 544 rows, adults and non-adults. Fit this model, using quadratic approximation:  hi ∼ Normal(μi, σ)  μi = α + β log(wi)  α ∼ Normal(178, 20)  β ∼ Log − Normal(0, 1)  σ ∼ Uniform(0, 50)  where hi is the height of individual i and wi is the weight (in kg) of individual i. The function for computing a natural log in R is just log. Can you interpret the resulting estimates?  
+
+(b) Begin with this plot:  R code  4.80  plot( height ~ weight , data=Howell1 , col=col.alpha(rangi2,0.4) )  Then use samples from the quadratic approximate posterior of the model in (a) to superimpose on the plot: (1) the predicted mean height as a function of weight, (2) the 97% interval for the mean, and (3) the 97% interval for predicted heights.  
+
+4H4. Plot the prior predictive distribution for the polynomial regression model in the chapter. You can modify the code that plots the linear regression prior predictive distribution. Can you modify the prior distributions of α, β1, and β2 so that the prior predictions stay within the biologically reasonable outcome space? That is to say: Do not try to fit the data by hand. But do try to keep the curves consistent with what you know about height and weight, before seeing these exact data.

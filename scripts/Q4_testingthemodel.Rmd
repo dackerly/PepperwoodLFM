@@ -1,0 +1,67 @@
+---
+title: "Untitled"
+author: "Indra Boving"
+date: "2026-01-27"
+output: html_document
+---
+
+Use bayesian modeling to model iLFM ~ psi_md
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(brms)
+library(tidyverse)
+```
+
+#Read in data: 
+
+```{r}
+concept_df <- read_csv(here("data", "concept_df.csv")) %>% 
+  filter(group == "species") %>% 
+  select(mwp, ilfm, species, intercept, slope, study) 
+
+q4_df <- read_csv(here("data", "q3_df.csv"))
+
+q4_df <- merge(concept_df, q3_df) %>%
+  filter(!is.na(sla)) %>%
+  mutate(
+    psi_z = as.numeric(scale(mwp)),   # or psi_md if that’s the column name
+    sla_z = as.numeric(scale(sla))
+  )
+```
+
+```{r}
+q4_df  %>%
+  group_by(species) %>%
+  summarise(n_sla = n_distinct(sla), .groups = "drop") %>%
+  arrange(desc(n_sla)) %>%
+  head(20)
+```
+
+
+```{r}
+m_tf <- brm(
+  ilfm ~ 1 + psi_z * sla_z,
+  data   = q4_df,
+  family = gaussian(),
+  chains = 4, cores = 4, iter = 6000, warmup = 2000,
+  control = list(adapt_delta = 0.99, max_treedepth = 15)
+)
+
+```
+
+```{r}
+library(bayesplot)
+library(dplyr)
+
+np <- nuts_params(m_tf )
+
+# how many divergences?
+sum(np$Parameter == "divergent__" & np$Value == 1)
+
+# any treedepth saturations?
+sum(np$Parameter == "treedepth__" & np$Value >= 10)  # change 10 if you set max_treedepth
+
+```
+
