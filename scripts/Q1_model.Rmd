@@ -117,6 +117,15 @@ df <- read_csv(here::here("data", "all-data-combined.csv")) %>%
                           ))) #these act really odd, dont include
   # filter(!(sp_site %in% c("ABICON_SEKI", "PINJEF_SEKI") & tissue_age %in% c("old")))
 
+df %>% 
+  filter(sp_site %in% c("ABICON_SEKI", 
+                          "PINJEF_SEKI", 
+                          "CALDEC_SEKI", 
+                          "PSEMEN_Pepperwood"
+                          ))%>% 
+  dplyr::group_by(sp_site) %>% 
+  summarise(n = nrow(.))
+
 ```
 
 #####Outliers? 
@@ -286,7 +295,8 @@ df1 <- df %>%
     study %in% c("Sedgwick") ~ "SeR",
     study %in% c("SEKI") ~ "PrC",
     study %in% c("StuntRanch") ~ "StR"
-  ))
+  ))# %>% 
+ # filter(!(study %in% c("SEKI") & tissue_age %in% c("old") ))
 
 df1 %>% 
   write_csv(here("data", "df1.csv"))
