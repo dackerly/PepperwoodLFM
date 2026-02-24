@@ -1,0 +1,27 @@
+﻿SpCode,PLC50-stem,PSI-TLP,LDMC,SLA,SLA_try_units,Dr,SWC,LMA,Psimin_pd,Psimin_md,functional type,growth form,RWC at TLP,Reference if not TRY,Reference if not TRY trait
+ABICON,-3.8,-2.11,0.403,37.689,4.603,,1.071,,,-3.28,gymnosperm,tree,89.403,"Boving et al., 2025, Mencucinni et al 2021","P50, TLP, SLA, RWCtlp, SWC;  Psimin_md"
+ADEFAS,-8.37,-3.4,0.526,50.572,5.057,2.44,,3.95,,-5.93,angiosperm,shrub,,,
+ARBMEN,-3,-1.91,0.446,67.735,6.773,,1.245,5.61,,,angiosperm,tree,,Chacon et al 2020,P50
+ARCGLA,-4.48,-2.51,0.294,37.338,3.734,5.18,,1.24,-6.28,,angiosperm,shrub,,"Madsen-Hepp, ","LDMC, "
+ARCPAT,-4.5,-2.2,0.504,34.532,3.602,2,0.632,3.6,,-5.374,angiosperm,shrub,90.940,"Boving et al., 2025; Madsen-Hepp, ","RWCtlp, SWC;  SLA"
+CALDEC,-6.79,-2.3,0.472,25.988,32.960,,1.351,,,,gymnosperm,tree,,"Boving et al., 2025; Madsen-Hepp, ","LMA, LDMC, RWCtlp, SWC;  SLA"
+CEACOR,,-2.7,,123.000,22.430,,2.454,,,,angiosperm,shrub,87.350,"Knight & Ackerley, 2001",SLA
+CEACUN,-9.6,-2.6,0.471,43.020,4.302,,1.504,5.6,-7.5,-8.15,angiosperm,shrub,,"Fletcher et al., 2018","TLP, SLA"
+CEAMEG,-8.08,-1.87,0.394,36.448,,,1.747,3.07,-5.447,-7.77,angiosperm,shrub,,"Fletcher et al., 2018","TLP, LMA, SLA, SWC"
+CEAPAR,,,,,,,,,,,angiosperm,shrub,,,
+CEASPI,-7.25,-2.8,0.265,70.000,7.000,3.7,1.652,1.257,-4.7,-5.44,angiosperm,shrub,,"Fletcher et al., 2018","LMA, SWC"
+CERBET,-7.51,-2.02,0.464,68.690,6.869,1.52,,,,-6.8,angiosperm,shrub,,,
+ERIFAS,,-3.23,0.175,112.521,11.252,,1.719,,,-9.05,angiosperm,shrub,,"Mecucinni et al., 2021",Psimin_md
+HETARB,-5.7996,-2.7,0.310,49.914,4.991,1.98,0.906,,,,angiosperm,shrub,,,
+MALLAU,-1.488,-2.07,0.299,48.250,4.825,12.2,,,,,angiosperm,shrub,86.198,,
+PINJEF,-3.11,-2.3,0.533,22.754,3.895,3.75,1.429,,,,gymnosperm,tree,85.150,"Boving el al., 2025","RWCtlp, SWC;   "
+PSEMEN,-3.786,-2.79,0.519,63.517,6.352,1.3084,0.933,5.61,-1.23,-2.06,gymnosperm,tree,,"Condo and Reinhardt, 2019",P50
+QUEAGR,-4.32,-2.58,0.233,60.978,6.098,7.02,0.803,9.89,,-3.12,angiosperm,tree,,"Chacon et al, 2020",TLP
+QUEBER,-5.64,-1.97,0.220,56.753,5.675,,,,-3.74,-4.35,angiosperm,tree,,,
+QUEDOU,-4.48,-3.4,0.508,76.289,7.629,2.82,0.508,0.97044335,,,angiosperm,tree,,"Allen et al, in prep.",TLP
+QUEDUR,-4.29,-3.33,0.438,56.267,5.627,,1.285,,,,angiosperm,tree,,,
+QUEGAR,-3.38,-3.61,,79.628,7.963,,,,,,angiosperm,tree,73.520,"John et al, 2018; Hahm et al., ","RWC, TLP"
+QUEKEL,-3.86,-2.86,,94.234,9.397,12.07,1.333,,,,angiosperm,tree,82.530,"Boving et al., 2025","RWCtlp, SWC;   "
+SALLEU,-1.659,-1.47,0.167,129.600,12.960,,,,,-4.73,angiosperm,shrub,,,
+SALMEL,-4.532,-2.08,0.147,100.201,10.020,,,,-8.4,-7.55,angiosperm,shrub,,,
+UMBCAL,-1.2153,-2.39,0.524,80.413,8.041,,0.909,,,-2.4,angiosperm,shrub,87.132,"John et al, 2018","TLP, RWC"

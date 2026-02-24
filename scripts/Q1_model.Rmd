@@ -295,8 +295,8 @@ df1 <- df %>%
     study %in% c("Sedgwick") ~ "SeR",
     study %in% c("SEKI") ~ "PrC",
     study %in% c("StuntRanch") ~ "StR"
-  ))# %>% 
- # filter(!(study %in% c("SEKI") & tissue_age %in% c("old") ))
+  )) %>% 
+  filter(!(study %in% c("SEKI") & tissue_age %in% c("old", "both")))
 
 df1 %>% 
   write_csv(here("data", "df1.csv"))
