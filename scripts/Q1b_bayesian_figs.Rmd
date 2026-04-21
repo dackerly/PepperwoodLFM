@@ -11,6 +11,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #Read in data: 
 
+```{r setup, include=FALSE}
+rm(list = ls())
+library(tidyverse)
+library(here)
+library(janitor)
+source(here("scripts", "figure_info.R"))
+library(ggpmisc)
+```
+
 ```{r}
 df1 <- read_csv(here("data", "df1.csv"))
 ```
@@ -571,6 +580,241 @@ p_AB
 
 ggsave(
   filename = here("figures", "species_slope_posteriors_twoPanel_overlapGrandExcl.png"),
+  plot     = p_AB,
+  width    = 8,
+  height   = 5,
+  units    = "in",
+  dpi      = 300
+)
+
+```
+
+##Add in second line to panel B for the conifer only slope: 
+
+```{r}
+library(tidybayes)
+library(dplyr)
+library(ggplot2)
+library(ggridges)
+library(forcats)
+library(stringr)
+library(patchwork)
+library(here)
+
+# ----------------------------
+# 0) Genus lookup from SpCodes
+#    expects columns: SpCode6, Genus
+# ----------------------------
+genus_lookup <- SpCodes %>%
+  select(species = SpCode6, Genus) %>%
+  distinct() %>%
+  mutate(
+    Genus = trimws(as.character(Genus)),
+    Genus = ifelse(is.na(Genus) | Genus == "", "Unknown", Genus)
+  )
+
+# ----------------------------
+# 1) Extract posterior draws for species-specific slopes
+# ----------------------------
+slope_draws <- fit_spp_slopes %>%
+  gather_draws(`^b_species.*:mwp_z$`, regex = TRUE) %>%
+  mutate(
+    species = gsub("^b_species", "", .variable),
+    species = gsub(":mwp_z$", "", species)
+  ) %>%
+  transmute(.draw, species, slope = .value)
+
+# ----------------------------
+# 2) Grand slope posterior (ALL species)
+# ----------------------------
+grand_all <- slope_draws %>%
+  group_by(.draw) %>%
+  summarise(grand_slope_all = mean(slope, na.rm = TRUE), .groups = "drop")
+
+grand_med_all <- median(grand_all$grand_slope_all)
+
+# ----------------------------
+# 3) Left panel flag: "Different from grand (ALL)"
+#    95% CrI of (species - grand_all) excludes 0
+# ----------------------------
+diff_flag_all <- slope_draws %>%
+  left_join(grand_all, by = ".draw") %>%
+  mutate(diff_all = slope - grand_slope_all) %>%
+  group_by(species) %>%
+  summarise(
+    diff_lo_all = quantile(diff_all, 0.025),
+    diff_hi_all = quantile(diff_all, 0.975),
+    mean        = mean(slope),          # ordering (posterior mean)
+    med         = median(slope),
+    .groups     = "drop"
+  ) %>%
+  mutate(diff_from_grand_all = !(diff_lo_all <= 0 & diff_hi_all >= 0)) %>%
+  left_join(genus_lookup, by = "species")
+
+# ----------------------------
+# 4) Species ordering: by posterior MEAN (shared across BOTH panels)
+# ----------------------------
+species_order_top_to_bottom <- diff_flag_all %>%
+  arrange(desc(mean)) %>%
+  pull(species)
+
+species_levels_for_plot <- rev(species_order_top_to_bottom)  # ggplot puts last at top
+
+# ----------------------------
+# 5) Right panel: compute "grand slope" EXCLUDING some species
+#    Then flag: does species 95% CrI overlap grand_excl 95% CrI?
+# ----------------------------
+exclude_spp <- c("ABICON", "PINJEF", "CALDEC", "PSEMEN")
+
+# Non-conifer grand slope (the goldenrod line)
+grand_excl <- slope_draws %>%
+  filter(!species %in% exclude_spp) %>%
+  group_by(.draw) %>%
+  summarise(grand_slope_excl = mean(slope, na.rm = TRUE), .groups = "drop")
+
+grand_med_excl <- median(grand_excl$grand_slope_excl)
+grand_ci_excl  <- quantile(grand_excl$grand_slope_excl, probs = c(0.025, 0.975), na.rm = TRUE)
+
+# NEW: Conifer-only grand slope
+grand_conifers <- slope_draws %>%
+  filter(species %in% exclude_spp) %>%
+  group_by(.draw) %>%
+  summarise(grand_slope_conifer = mean(slope, na.rm = TRUE), .groups = "drop")
+
+grand_med_conifer <- median(grand_conifers$grand_slope_conifer)
+
+# per-species 95% CrI and overlap with excluded-grand 95% CrI
+cri_overlap_flag <- slope_draws %>%
+  group_by(species) %>%
+  summarise(
+    lo = quantile(slope, 0.025, na.rm = TRUE),
+    hi = quantile(slope, 0.975, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    overlaps_grand_excl =
+      !(hi < grand_ci_excl[[1]] | lo > grand_ci_excl[[2]])
+  )
+# ----------------------------
+# 6) Build plotting dfs (shared y ordering)
+# ----------------------------
+plot_left <- slope_draws %>%
+  left_join(diff_flag_all %>% select(species, diff_from_grand_all, Genus), by = "species") %>%
+  mutate(
+    species = factor(species, levels = species_levels_for_plot),
+    fill_grp = factor(
+      diff_from_grand_all,
+      levels = c(FALSE, TRUE),
+      labels = c("Not different from grand", "Different from grand")
+    )
+  )
+
+plot_right <- slope_draws %>%
+  left_join(cri_overlap_flag, by = "species") %>%
+  left_join(diff_flag_all %>% select(species, Genus), by = "species") %>%
+  mutate(
+    species = factor(species, levels = species_levels_for_plot),
+    fill_grp = factor(
+      overlaps_grand_excl,
+      levels = c(TRUE, FALSE),
+      labels = c("Not different from grand", "Different from grand")
+    )
+  )
+
+# ----------------------------
+# 7) Axis text colors by Genus (fixed mapping)
+# ----------------------------
+genus_colors <- c(
+  Abies          = "#17154f",
+  Adenostoma     = "#8E3B46",
+  Arbutus        = "#6c5d9e",
+  Arctostaphylos = "#9d9cd5",
+  Calocedrus     = "#59385c",
+  Ceanothus      = "#2C7FB8",
+  Cercocarpus    = "#d8b847",
+  Eriogonum      = "#bf3729",
+  Heteromeles    = "#e69b00",
+  Malosma        = "#f5bb50",
+  Pinus          = "#ada43b",
+  Pseudotsuga    = "#355828",
+  Quercus        = "#D1495B",
+  Salvia         = "#d48f90",
+  Umbellularia   = "#d8b847"
+)
+
+species_levels <- levels(plot_left$species)
+
+axis_y_cols <- diff_flag_all %>%
+  distinct(species, Genus) %>%
+  mutate(
+    Genus = ifelse(is.na(Genus) | Genus == "", "Unknown", Genus),
+    col   = unname(genus_colors[Genus]),
+    col   = ifelse(is.na(col), "grey30", col)
+  ) %>%
+  slice(match(species_levels, species)) %>%
+  pull(col)
+
+# ----------------------------
+# 8) Make panels
+xlims <- c(-0.55, 0.275)
+
+pA <- ggplot(plot_left, aes(x = slope, y = species, fill = fill_grp)) +
+  geom_vline(xintercept = 0, linetype = 2, linewidth = 0.4) +
+  geom_vline(xintercept = grand_med_all, linewidth = 0.8, color = "darkgreen") +
+  geom_density_ridges(scale = 2.2, rel_min_height = 0.01, alpha = 0.85, color = NA) +
+  scale_fill_manual(values = c("grey60", "black")) +
+  coord_cartesian(xlim = xlims) +
+  labs(x = NULL, y = NULL, fill = NULL) +
+  theme_classic(base_size = 14) +
+  theme(
+    legend.position = "top",
+    axis.text.y = element_text(color = axis_y_cols, face = "bold", size = 11),
+    plot.margin = margin(0, 0, 0, 0)
+  )
+
+pB <- ggplot(plot_right, aes(x = slope, y = species, fill = fill_grp)) +
+  geom_vline(xintercept = 0, linetype = 2, linewidth = 0.4) +
+  # Original non-conifer grand slope
+  geom_vline(xintercept = grand_med_excl, linewidth = 0.8, color = "goldenrod") +
+  # NEW: Conifer-only grand slope (added as a dark blue or choose a color you prefer)
+  geom_vline(xintercept = grand_med_conifer, linewidth = 0.8, color = "#17154f", linetype = "solid") +
+  geom_density_ridges(scale = 2.2, rel_min_height = 0.01, alpha = 0.85, color = NA) +
+  scale_fill_manual(values = c("grey60", "black")) +
+  coord_cartesian(xlim = xlims) +
+  labs(y = NULL, fill = NULL) +
+  theme_classic(base_size = 14) +
+  theme(
+    legend.position = "none",
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title.x = element_blank(),
+    plot.margin = margin(0, 0, 0, 0)
+  )
+# ----------------------------
+# 9) Combine w/ shared y axis (left only) + panel labels A/B
+# ----------------------------
+p_AB <- pA + pB +
+  plot_layout(widths = c(1, 1), guides = "collect") +
+  plot_annotation(tag_levels = "A") +
+  plot_annotation(
+    caption = expression("Posterior of species slope (iLFM ~ " * italic(Psi)[MD] * ")"),
+    theme = theme(
+      plot.caption = element_text(
+        size = 14,
+        hjust = 0.5,
+        margin = margin(t = 8)
+      )
+    )
+  ) &
+  theme(
+    legend.position = "top",
+    legend.justification = "center"
+  )
+
+p_AB
+
+ggsave(
+  filename = here("figures", "species_slope_posteriors_twoPanel_overlapGrandExcl_withConsSlope.png"),
   plot     = p_AB,
   width    = 8,
   height   = 5,
