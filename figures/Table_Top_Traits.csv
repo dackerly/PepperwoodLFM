@@ -1,0 +1,2 @@
+"Model","AIC","Delta_AIC","In_Sample_R2","Cross_Val_R2","Delta_AIC_Subset"
+"Base (WP Only)",-55.2,106.3,0.724,0.407,0

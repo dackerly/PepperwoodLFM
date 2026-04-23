@@ -1,0 +1,215 @@
+"Model","AIC","Delta_AIC","In_Sample_R2","Cross_Val_R2"
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla",-161.5,0,0.757,0.61
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla",-160.2,1.3,0.757,0.572
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-160,1.5,0.758,0.6
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla",-159.9,1.5,0.758,0.603
+"F.Type + lfmmax + mwp + sla + tlp +      F.Type x mwp + lfmmax x mwp + mwp x sla",-159.7,1.8,0.757,0.572
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla",-159.7,1.8,0.757,0.58
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + mwp x psimin +      mwp x sla + mwp x tlp",-159.6,1.8,0.758,0.596
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla",-159.5,2,0.757,0.562
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla + mwp x tlp",-159.1,2.4,0.758,0.591
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + mwp x sla + mwp x tlp",-159,2.5,0.757,0.599
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-158.8,2.7,0.758,0.565
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla",-158.3,3.2,0.757,0.531
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla",-158.2,3.3,0.757,0.557
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-158.2,3.3,0.758,0.568
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla",-158.2,3.3,0.758,0.574
+"F.Type + lfmmax + mwp + sla + tlp +      F.Type x mwp + lfmmax x mwp + mwp x sla + mwp x tlp",-158.2,3.3,0.758,0.561
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla",-158.1,3.4,0.757,0.538
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-158.1,3.4,0.758,0.554
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla",-158,3.5,0.758,0.556
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + mwp x sla + mwp x tlp",-157.9,3.6,0.757,0.563
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + mwp x psimin +      mwp x sla + mwp x tlp",-157.8,3.7,0.758,0.565
+"F.Type + lfmmax + mwp + p50 + sla +      F.Type x mwp + lfmmax x mwp + mwp x sla",-157.8,3.7,0.758,0.5
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x psimin +      mwp x sla + mwp x tlp",-157.7,3.8,0.758,0.551
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla",-157.7,3.8,0.757,0.527
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x sla",-157.7,3.8,0.757,0.573
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla",-157.5,4,0.757,0.551
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp",-157.4,4.1,0.756,0.59
+"F.Type + lfmmax + mwp + sla + tlp +      F.Type x mwp + mwp x sla + mwp x tlp",-157.3,4.2,0.757,0.56
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla + mwp x tlp",-157.3,4.2,0.758,0.56
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla + mwp x tlp",-157.2,4.3,0.758,0.547
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + mwp x sla +      mwp x tlp",-157.1,4.4,0.757,0.567
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x sla +      mwp x tlp",-157.1,4.4,0.757,0.553
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-157.1,4.4,0.756,0.588
+"F.Type + lfmmax + mwp + psimin + sla + (1 |      species) + F.Type x mwp + lfmmax x mwp + mwp x sla",-157,4.5,0.757,0.513
+"F.Type + lfmmax + mwp + sla +      F.Type x mwp + lfmmax x mwp + mwp x sla",-157,4.5,0.758,0.487
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla + mwp x tlp",-156.8,4.7,0.758,0.548
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-156.8,4.7,0.758,0.524
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x p50 +      mwp x psimin + mwp x sla + mwp x tlp",-156.5,5,0.758,0.553
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x sla + mwp x tlp",-156.5,5,0.757,0.568
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-156.5,5,0.758,0.526
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp",-156.3,5.2,0.756,0.549
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla",-156.3,5.2,0.757,0.513
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x sla",-156.3,5.2,0.757,0.521
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x psimin + mwp x sla + mwp x tlp",-156.2,5.2,0.758,0.561
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x psimin + mwp x sla",-156.2,5.3,0.758,0.564
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x sla + mwp x tlp",-156.2,5.3,0.758,0.557
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-156.2,5.3,0.758,0.518
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla + mwp x tlp",-156.2,5.3,0.758,0.541
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla",-156.2,5.3,0.758,0.521
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x psimin + mwp x sla",-156.1,5.4,0.758,0.551
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + ldmc x mwp + lfmmax x mwp +      mwp x sla",-156.1,5.4,0.757,0.531
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + mwp x sla",-156,5.4,0.755,0.601
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x tlp",-156,5.5,0.757,0.58
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-156,5.5,0.756,0.548
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + mwp x sla +      mwp x tlp",-155.9,5.6,0.757,0.522
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + mwp x p50 + mwp x sla +      mwp x tlp",-155.9,5.6,0.757,0.549
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla",-155.8,5.6,0.758,0.491
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + mwp x psimin +      mwp x sla + mwp x tlp",-155.8,5.7,0.758,0.515
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla",-155.8,5.7,0.758,0.471
+"F.Type + lfmmax + mwp + p50 + sla +      F.Type x mwp + lfmmax x mwp + mwp x p50 + mwp x sla",-155.8,5.7,0.758,0.482
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla",-155.7,5.8,0.757,0.513
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x sla",-155.7,5.8,0.757,0.518
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp",-155.6,5.9,0.756,0.559
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x psimin",-155.5,5.9,0.756,0.581
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + mwp x sla + mwp x tlp",-155.5,5.9,0.757,0.525
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp",-155.5,6,0.756,0.54
+"F.Type + lfmmax + mwp + sla + tlp +      F.Type x mwp + lfmmax x mwp",-155.5,6,0.756,0.545
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla + mwp x tlp",-155.3,6.1,0.758,0.511
+"F.Type + lfmmax + mwp + psimin + sla + (1 |      species) + F.Type x mwp + lfmmax x mwp + mwp x psimin +      mwp x sla",-155.3,6.2,0.758,0.505
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x psimin + mwp x sla + mwp x tlp",-155.3,6.2,0.758,0.546
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x psimin + mwp x sla + mwp x tlp",-155.3,6.2,0.758,0.533
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + mwp x psimin +      mwp x sla",-155.3,6.2,0.755,0.595
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x sla + mwp x tlp",-155.2,6.2,0.757,0.523
+"F.Type + ldmc + lfmmax + mwp + sla +      F.Type x mwp + lfmmax x mwp + mwp x sla",-155.2,6.3,0.758,0.465
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-155.2,6.3,0.756,0.556
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-155.2,6.3,0.756,0.539
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + mwp x sla +      mwp x tlp",-155.1,6.3,0.757,0.516
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla",-155.1,6.4,0.757,0.489
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x tlp",-155.1,6.4,0.757,0.529
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x p50 +      mwp x sla + mwp x tlp",-155.1,6.4,0.757,0.543
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x sla",-155,6.5,0.756,0.573
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50",-155,6.5,0.756,0.531
+"F.Type + lfmmax + mwp + p50 + tlp +      F.Type x mwp + lfmmax x mwp",-155,6.5,0.756,0.516
+"F.Type + lfmmax + mwp + sla + tlp +      F.Type x mwp + lfmmax x mwp + mwp x tlp",-154.9,6.5,0.756,0.542
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + ldmc x mwp + mwp x sla +      mwp x tlp",-154.9,6.6,0.757,0.527
+"F.Type + lfmmax + mwp + sla + tlp +      F.Type x mwp + mwp x sla",-154.9,6.6,0.755,0.566
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla + mwp x tlp",-154.9,6.6,0.758,0.504
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + mwp x sla",-154.9,6.6,0.755,0.564
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + mwp x psimin +      mwp x tlp",-154.9,6.6,0.756,0.575
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x sla + mwp x tlp",-154.8,6.6,0.758,0.508
+"F.Type + lfmmax + mwp + p50 + tlp +      F.Type x mwp + lfmmax x mwp + mwp x tlp",-154.8,6.7,0.756,0.515
+"F.Type + lfmmax + mwp + tlp +      F.Type x mwp + lfmmax x mwp",-154.7,6.7,0.756,0.517
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + mwp x p50 +      mwp x psimin + mwp x sla + mwp x tlp",-154.6,6.8,0.758,0.516
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      mwp x sla + mwp x tlp",-154.5,7,0.757,0.517
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + ldmc x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-154.5,7,0.758,0.512
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x tlp",-154.5,7,0.757,0.526
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + lfmmax x mwp",-154.4,7.1,0.756,0.507
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50",-154.4,7.1,0.756,0.527
+"F.Type + lfmmax + mwp + psimin + tlp + (1 |      species) + F.Type x mwp + lfmmax x mwp",-154.4,7.1,0.756,0.538
+"F.Type + lfmmax + mwp + p50 + tlp +      F.Type x mwp + lfmmax x mwp + mwp x p50 + mwp x tlp",-154.3,7.1,0.757,0.498
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x p50 +      mwp x psimin + mwp x sla",-154.3,7.1,0.756,0.553
+"F.Type + lfmmax + mwp + tlp +      F.Type x mwp + lfmmax x mwp + mwp x tlp",-154.3,7.2,0.756,0.514
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x psimin + mwp x sla",-154.3,7.2,0.758,0.516
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla + mwp x tlp",-154.3,7.2,0.758,0.502
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x p50 + mwp x sla",-154.3,7.2,0.757,0.488
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      mwp x psimin + mwp x sla + mwp x tlp",-154.3,7.2,0.758,0.511
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla",-154.2,7.3,0.758,0.482
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x psimin + mwp x sla",-154.2,7.3,0.758,0.509
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x sla + mwp x tlp",-154.2,7.3,0.758,0.503
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + mwp x sla",-154.2,7.3,0.755,0.571
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x tlp",-154.2,7.3,0.757,0.549
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x tlp",-154.1,7.3,0.757,0.532
+"F.Type + lfmmax + mwp + p50 + sla +      F.Type x mwp + lfmmax x mwp",-154.1,7.4,0.756,0.475
+"F.Type + lfmmax + mwp + p50 + tlp +      F.Type x mwp + lfmmax x mwp + mwp x p50",-154.1,7.4,0.756,0.498
+"F.Type + lfmmax + mwp + psimin + tlp + (1 |      species) + F.Type x mwp + lfmmax x mwp + mwp x tlp",-154.1,7.4,0.756,0.536
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x sla",-154.1,7.4,0.755,0.554
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-154,7.5,0.756,0.507
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + ldmc x mwp + mwp x sla",-153.9,7.6,0.756,0.535
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + mwp x p50 +      mwp x sla + mwp x tlp",-153.9,7.6,0.757,0.506
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + F.Type x mwp + lfmmax x mwp +      mwp x sla",-153.9,7.6,0.758,0.462
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + mwp x p50 + mwp x sla",-153.9,7.6,0.755,0.556
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla",-153.9,7.6,0.758,0.475
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      (1 | species) + F.Type x mwp + ldmc x mwp + lfmmax x mwp +      mwp x sla",-153.8,7.6,0.758,0.466
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp",-153.8,7.7,0.756,0.511
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla",-153.8,7.7,0.758,0.452
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin",-153.8,7.7,0.756,0.551
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + mwp x tlp",-153.7,7.7,0.755,0.579
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x sla",-153.7,7.7,0.756,0.526
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x p50 + mwp x sla",-153.7,7.8,0.757,0.491
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp",-153.6,7.8,0.756,0.505
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin",-153.6,7.9,0.756,0.531
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp",-153.6,7.9,0.756,0.549
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x psimin + mwp x sla",-153.5,7.9,0.756,0.564
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla",-153.5,8,0.758,0.481
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x psimin + mwp x sla + mwp x tlp",-153.5,8,0.758,0.496
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + mwp x psimin +      mwp x sla",-153.5,8,0.755,0.566
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x psimin + mwp x sla + mwp x tlp",-153.3,8.1,0.758,0.494
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x tlp",-153.3,8.2,0.756,0.543
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x psimin +      mwp x sla",-153.3,8.2,0.755,0.548
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-153.3,8.2,0.756,0.504
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x p50 + mwp x sla + mwp x tlp",-153.2,8.2,0.757,0.504
+"F.Type + ldmc + lfmmax + mwp + sla +      F.Type x mwp + ldmc x mwp + lfmmax x mwp + mwp x sla",-153.2,8.2,0.758,0.459
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-153.2,8.3,0.756,0.505
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + mwp x sla",-153.2,8.3,0.755,0.535
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x tlp",-153.2,8.3,0.757,0.484
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      (1 | species) + F.Type x mwp + ldmc x mwp + lfmmax x mwp +      mwp x sla",-153.2,8.3,0.757,0.485
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + mwp x p50 +      mwp x sla + mwp x tlp",-153.1,8.3,0.757,0.504
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50",-153.1,8.4,0.756,0.485
+"F.Type + lfmmax + mwp + psimin + sla + (1 |      species) + F.Type x mwp + lfmmax x mwp",-153.1,8.4,0.756,0.486
+"F.Type + lfmmax + mwp + psimin + tlp + (1 |      species) + F.Type x mwp + lfmmax x mwp + mwp x psimin +      mwp x tlp",-153.1,8.4,0.757,0.528
+"F.Type + ldmc + lfmmax + mwp + p50 + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp",-153.1,8.4,0.756,0.465
+"F.Type + ldmc + lfmmax + mwp + tlp +      F.Type x mwp + lfmmax x mwp",-153.1,8.4,0.756,0.483
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x psimin +      mwp x tlp",-153.1,8.4,0.756,0.528
+"F.Type + lfmmax + mwp + p50 + psimin + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp",-153,8.4,0.756,0.486
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      mwp x sla",-153,8.5,0.756,0.521
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + mwp x psimin +      mwp x tlp",-153,8.5,0.756,0.542
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + mwp x sla",-153,8.5,0.755,0.524
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x p50 +      mwp x sla",-152.9,8.6,0.755,0.549
+"F.Type + lfmmax + mwp + sla +      F.Type x mwp + lfmmax x mwp",-152.9,8.6,0.756,0.456
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x p50 + mwp x sla + mwp x tlp",-152.9,8.6,0.758,0.462
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + mwp x tlp",-152.9,8.6,0.755,0.54
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x tlp",-152.8,8.7,0.755,0.549
+"F.Type + lfmmax + mwp + p50 + psimin + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-152.8,8.7,0.756,0.484
+"F.Type + ldmc + lfmmax + mwp + p50 + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-152.8,8.7,0.756,0.465
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      mwp x p50 + mwp x psimin + mwp x sla + mwp x tlp",-152.8,8.7,0.758,0.509
+"F.Type + lfmmax + mwp + p50 + sla +      F.Type x mwp + lfmmax x mwp + mwp x p50",-152.8,8.7,0.756,0.453
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x psimin + mwp x tlp",-152.7,8.8,0.757,0.509
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + mwp x p50 +      mwp x psimin + mwp x sla",-152.6,8.9,0.756,0.52
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x tlp",-152.6,8.9,0.757,0.487
+"F.Type + ldmc + lfmmax + mwp + tlp +      F.Type x mwp + lfmmax x mwp + mwp x tlp",-152.6,8.9,0.756,0.478
+"F.Type + ldmc + lfmmax + mwp + psimin + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp",-152.6,8.9,0.756,0.498
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50",-152.5,8.9,0.756,0.489
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      mwp x p50 + mwp x sla + mwp x tlp",-152.5,9,0.757,0.502
+"F.Type + lfmmax + mwp + psimin + tlp + (1 |      species) + F.Type x mwp + lfmmax x mwp + mwp x psimin",-152.5,9,0.756,0.528
+"F.Type + lfmmax + mwp + p50 + psimin + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x tlp",-152.5,9,0.757,0.474
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x psimin + mwp x tlp",-152.5,9,0.756,0.542
+"F.Type + ldmc + lfmmax + mwp + p50 + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x tlp",-152.4,9.1,0.757,0.443
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x psimin",-152.4,9.1,0.756,0.519
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp",-152.4,9.1,0.756,0.492
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x psimin + mwp x sla",-152.4,9.1,0.758,0.475
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x p50 + mwp x psimin + mwp x sla",-152.4,9.1,0.758,0.496
+"F.Type + lfmmax + mwp + psimin + tlp + (1 |      species) + F.Type x mwp + mwp x psimin + mwp x tlp",-152.3,9.2,0.756,0.531
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x p50 + mwp x sla + mwp x tlp",-152.3,9.2,0.758,0.465
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla",-152.3,9.2,0.758,0.453
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x tlp",-152.3,9.2,0.757,0.496
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x psimin + mwp x tlp",-152.2,9.3,0.757,0.533
+"F.Type + lfmmax + mwp + p50 + psimin + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50",-152.2,9.3,0.756,0.474
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + mwp x sla",-152.2,9.3,0.755,0.518
+"F.Type + ldmc + lfmmax + mwp + psimin + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x tlp",-152.2,9.3,0.756,0.495
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x p50 + mwp x sla",-152.2,9.3,0.756,0.515
+"F.Type + ldmc + lfmmax + mwp + p50 + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x p50",-152.2,9.3,0.756,0.444
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x tlp",-152.2,9.3,0.756,0.488
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp",-152.2,9.3,0.756,0.466
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      (1 | species) + F.Type x mwp + lfmmax x mwp",-152.1,9.4,0.756,0.447
+"F.Type + lfmmax + mwp + p50 +      F.Type x mwp + lfmmax x mwp",-152.1,9.4,0.756,0.411
+"F.Type + lfmmax + mwp + p50 + tlp +      F.Type x mwp + mwp x tlp",-152,9.5,0.755,0.514
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + mwp x p50 +      mwp x sla",-151.9,9.5,0.755,0.515
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x sla",-151.9,9.6,0.758,0.458
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + mwp x tlp",-151.9,9.6,0.755,0.532
+"F.Type + lfmmax + mwp + p50 + psimin + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x tlp",-151.9,9.6,0.757,0.477
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + F.Type x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla",-151.9,9.6,0.758,0.445
+"F.Type + ldmc + lfmmax + mwp + sla + tlp +      (1 | species) + F.Type x mwp + ldmc x mwp + lfmmax x mwp",-151.8,9.6,0.756,0.499
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      (1 | species) + F.Type x mwp + ldmc x mwp + lfmmax x mwp +      mwp x p50 + mwp x sla",-151.8,9.6,0.758,0.437
+"F.Type + ldmc + lfmmax + mwp + p50 + sla +      tlp + F.Type x mwp + ldmc x mwp +      mwp x tlp",-151.8,9.7,0.755,0.501
+"F.Type + lfmmax + mwp + sla + tlp +      F.Type x mwp + mwp x tlp",-151.8,9.7,0.755,0.533
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + lfmmax x mwp +      mwp x psimin",-151.8,9.7,0.756,0.496
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + mwp x tlp",-151.8,9.7,0.755,0.546
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp + mwp x psimin",-151.8,9.7,0.756,0.537
+"F.Type + ldmc + lfmmax + mwp + p50 + psimin +      sla + tlp + F.Type x mwp + ldmc x mwp +      lfmmax x mwp",-151.7,9.8,0.756,0.491
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + mwp x p50 + mwp x tlp",-151.6,9.9,0.755,0.524
+"F.Type + lfmmax + mwp + p50 + sla +      F.Type x mwp + mwp x sla",-151.6,9.9,0.755,0.483
+"F.Type + lfmmax + mwp + F.Type x mwp +      lfmmax x mwp",-151.6,9.9,0.756,0.386
+"F.Type + lfmmax + mwp + tlp +      F.Type x mwp + mwp x tlp",-151.5,10,0.755,0.512
+"Base (WP Only)",-55.2,106.3,0.724,0.407

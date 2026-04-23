@@ -1,0 +1,129 @@
+Model,AIC,Delta_AIC,In_Sample_R2,Cross_Val_R2
+tlp + ldmc + lfmmax + F.Type,-155.5,0,0.757,0.578
+sla + tlp + ldmc + lfmmax + F.Type,-153.8,1.7,0.758,0.551
+tlp + lfmmax + F.Type,-153,2.4,0.757,0.584
+sla + tlp + lfmmax + F.Type,-152.8,2.7,0.758,0.569
+tlp + ldmc + lfmmax + psimin + F.Type,-152.3,3.2,0.758,0.55
+p50 + tlp + ldmc + lfmmax + F.Type,-151.9,3.6,0.757,0.54
+sla + tlp + ldmc + lfmmax + psimin + F.Type,-151.1,4.4,0.758,0.519
+sla + tlp + lfmmax + psimin + F.Type,-150.9,4.5,0.758,0.546
+tlp + lfmmax + psimin + F.Type,-150.7,4.8,0.757,0.557
+p50 + sla + tlp + ldmc + lfmmax + F.Type,-150.6,4.8,0.758,0.506
+p50 + sla + tlp + lfmmax + psimin + F.Type,-149.9,5.6,0.759,0.529
+p50 + tlp + lfmmax + F.Type,-149.6,5.9,0.757,0.568
+p50 + tlp + ldmc + lfmmax + psimin + F.Type,-149.6,5.9,0.758,0.512
+p50 + sla + tlp + lfmmax + F.Type,-149.6,5.9,0.758,0.558
+p50 + sla + tlp + ldmc + lfmmax + psimin + F.Type,-149.4,6,0.759,0.49
+p50 + tlp + lfmmax + psimin + F.Type,-149.2,6.3,0.758,0.538
+sla + ldmc + lfmmax + F.Type,-148.3,7.1,0.756,0.508
+p50 + sla + tlp + ldmc + lfmmax + psimin,-147.8,7.6,0.757,0.52
+sla + tlp + ldmc + F.Type,-147.5,7.9,0.757,0.534
+sla + lfmmax + F.Type,-147,8.5,0.755,0.558
+sla + ldmc + F.Type,-146.3,9.1,0.756,0.525
+sla + tlp + F.Type,-146.3,9.1,0.757,0.51
+sla + tlp + ldmc + psimin + F.Type,-145.8,9.7,0.758,0.505
+p50 + sla + ldmc + lfmmax + F.Type,-145.4,10.1,0.756,0.49
+sla + ldmc + lfmmax + psimin + F.Type,-145.4,10.1,0.756,0.471
+tlp + ldmc + F.Type,-145.3,10.2,0.756,0.533
+sla + tlp + psimin + F.Type,-145,10.4,0.758,0.471
+p50 + sla + tlp + psimin + F.Type,-145,10.5,0.758,0.49
+p50 + sla + tlp + ldmc + F.Type,-145,10.5,0.757,0.464
+sla + lfmmax + psimin + F.Type,-144.9,10.5,0.756,0.526
+p50 + sla + lfmmax + psimin + F.Type,-144.8,10.7,0.757,0.501
+sla + F.Type,-144.7,10.7,0.755,0.545
+p50 + sla + tlp + F.Type,-144.6,10.8,0.757,0.509
+p50 + sla + psimin + F.Type,-144.3,11.1,0.756,0.498
+p50 + sla + lfmmax + F.Type,-144.3,11.2,0.755,0.553
+p50 + tlp + ldmc + F.Type,-144.1,11.3,0.756,0.47
+p50 + sla + ldmc + F.Type,-144,11.4,0.756,0.496
+p50 + sla + ldmc + lfmmax + psimin + F.Type,-143.8,11.7,0.757,0.451
+p50 + sla + tlp + ldmc + psimin + F.Type,-143.7,11.8,0.758,0.442
+p50 + sla + F.Type,-143.5,11.9,0.755,0.54
+tlp + ldmc + psimin + F.Type,-143.3,12.2,0.756,0.509
+p50 + sla + tlp + lfmmax + psimin,-143.2,12.3,0.757,0.492
+sla + ldmc + psimin + F.Type,-143,12.4,0.756,0.5
+tlp + F.Type,-142.8,12.7,0.755,0.523
+p50 + sla + ldmc + psimin + F.Type,-142.7,12.7,0.756,0.457
+p50 + tlp + F.Type,-142.6,12.9,0.755,0.52
+sla + tlp + ldmc + lfmmax + psimin,-142.4,13,0.755,0.553
+tlp + psimin + F.Type,-142.1,13.4,0.756,0.485
+sla + psimin + F.Type,-142,13.5,0.756,0.518
+p50 + tlp + ldmc + lfmmax + psimin,-141.9,13.5,0.754,0.538
+p50 + tlp + psimin + F.Type,-141.9,13.6,0.756,0.49
+p50 + tlp + ldmc + psimin + F.Type,-141.5,14,0.756,0.429
+ldmc + lfmmax + F.Type,-141.1,14.4,0.753,0.522
+p50 + sla + ldmc + lfmmax + psimin,-140,15.4,0.754,0.503
+p50 + sla + tlp + ldmc + psimin,-139.2,16.2,0.755,0.474
+sla + tlp + lfmmax + psimin,-138.7,16.8,0.754,0.512
+sla + tlp + ldmc + psimin,-138.5,17,0.754,0.532
+p50 + tlp + lfmmax + psimin,-138.2,17.3,0.754,0.511
+ldmc + F.Type,-137.8,17.7,0.752,0.505
+ldmc + lfmmax + psimin + F.Type,-137.7,17.8,0.753,0.493
+p50 + sla + lfmmax + psimin,-137.6,17.8,0.754,0.521
+p50 + sla + ldmc + psimin,-137.5,18,0.754,0.518
+p50 + ldmc + lfmmax + F.Type,-137.4,18,0.753,0.506
+tlp + ldmc + lfmmax + psimin,-137.1,18.4,0.752,0.558
+p50 + ldmc + F.Type,-135.4,20.1,0.752,0.483
+p50 + sla + psimin,-135,20.5,0.754,0.473
+p50 + sla + tlp + psimin,-134.9,20.5,0.755,0.413
+sla + tlp + psimin,-134.7,20.8,0.754,0.428
+p50 + ldmc + lfmmax + psimin + F.Type,-134.1,21.3,0.753,0.466
+tlp + lfmmax + psimin,-133.9,21.6,0.752,0.531
+ldmc + psimin + F.Type,-133.9,21.6,0.752,0.473
+sla + ldmc + lfmmax + psimin,-133.5,22,0.751,0.498
+lfmmax + F.Type,-133,22.5,0.75,0.574
+p50 + ldmc + psimin + F.Type,-132.8,22.7,0.752,0.435
+sla + ldmc + psimin,-132.2,23.2,0.751,0.53
+sla + lfmmax + psimin,-131.6,23.9,0.751,0.521
+F.Type,-130.7,24.8,0.75,0.55
+sla + psimin,-130.7,24.8,0.751,0.492
+lfmmax + psimin + F.Type,-129.9,25.5,0.75,0.547
+p50 + sla + tlp + ldmc + lfmmax,-129.7,25.8,0.75,0.523
+p50 + lfmmax + F.Type,-129.7,25.8,0.75,0.562
+sla + tlp + ldmc + lfmmax,-129.5,25.9,0.749,0.567
+p50 + F.Type,-129,26.4,0.75,0.543
+p50 + lfmmax + psimin + F.Type,-128.5,27,0.75,0.514
+p50 + psimin + F.Type,-128.3,27.2,0.75,0.497
+psimin + F.Type,-127.5,28,0.75,0.521
+sla + tlp + lfmmax,-126,29.5,0.749,0.546
+p50 + sla + tlp + lfmmax,-125.6,29.9,0.75,0.532
+tlp + ldmc + psimin,-124,31.4,0.749,0.493
+p50 + sla + ldmc + lfmmax,-123.1,32.4,0.748,0.514
+sla + ldmc + lfmmax,-122,33.4,0.746,0.521
+p50 + tlp + ldmc + psimin,-121.6,33.9,0.749,0.411
+p50 + sla + lfmmax,-120.9,34.5,0.748,0.547
+tlp + psimin,-120.9,34.5,0.749,0.413
+sla + lfmmax,-120.2,35.3,0.746,0.546
+sla + tlp + ldmc,-119.4,36,0.747,0.537
+tlp + ldmc + lfmmax,-118.9,36.5,0.744,0.559
+sla + ldmc,-118.6,36.8,0.746,0.542
+p50 + tlp + psimin,-118.4,37,0.749,0.391
+p50 + tlp + ldmc + lfmmax,-118.1,37.4,0.745,0.524
+p50 + sla + ldmc,-117.1,38.4,0.746,0.521
+p50 + sla + tlp + ldmc,-116.7,38.7,0.747,0.46
+tlp + lfmmax,-116,39.5,0.744,0.566
+sla,-115.9,39.5,0.746,0.494
+sla + tlp,-115,40.5,0.747,0.435
+p50 + sla,-115,40.5,0.746,0.49
+p50 + tlp + lfmmax,-114.9,40.5,0.745,0.547
+p50 + sla + tlp,-113.3,42.2,0.747,0.443
+p50 + ldmc + lfmmax + psimin,-104.1,51.4,0.742,0.416
+p50 + lfmmax + psimin,-102.6,52.8,0.742,0.472
+ldmc + lfmmax + psimin,-95.6,59.9,0.738,0.429
+p50 + ldmc + psimin,-94.6,60.8,0.74,0.345
+p50 + psimin,-94,61.4,0.74,0.383
+lfmmax + psimin,-93.7,61.7,0.738,0.489
+ldmc + psimin,-92,63.4,0.738,0.398
+psimin,-91,64.4,0.737,0.432
+p50 + tlp + ldmc,-84.3,71.2,0.736,0.312
+tlp + ldmc,-83.3,72.1,0.735,0.421
+p50 + tlp,-82.1,73.4,0.736,0.376
+tlp,-79.9,75.5,0.735,0.396
+p50 + ldmc + lfmmax,-74.3,81.2,0.73,0.424
+ldmc + lfmmax,-73.2,82.2,0.728,0.446
+p50 + lfmmax,-71.5,84,0.73,0.488
+lfmmax,-70.1,85.4,0.728,0.511
+ldmc,-57.5,98,0.725,0.377
+Base (WP Only),-55.2,100.2,0.724,0.407
+p50 + ldmc,-55.2,100.3,0.725,0.339
+p50,-53.7,101.8,0.724,0.38

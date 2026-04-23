@@ -1033,6 +1033,8 @@ n_by_species_study <- df1 %>%
 
 print(n_by_species_study)
 
+write_csv(n_by_species_study, here("data", "study_species_n.csv"))
+
 # (c) quick summary: how many species have >1 study?
 cat("\nSpecies with >1 study:",
     sum(studies_per_species$n_studies > 1),
@@ -1252,6 +1254,63 @@ write_csv(
   here("results", "figures", "tableSX_species_intercept_slope_LFM_mixed.csv")
 )
 ```
+#Table S2: Are models for gymnos and angios different?
+1) In the discussion you mention prior evidence that conifers have stable water content as psi declines. I would move this to intro, and use it as prior basis for adding a model that tests whether angio and conifers have different (but shared within) slopes. I.e. + Group + 1|Species. You have a model dropping conifers and adding angiosperms, but why not formally test that they are different?
+
+
+```{r}
+library(lme4)
+library(emmeans)
+library(dplyr)
+library(readr)
+library(here)
+
+df2 <- df1 %>% 
+  mutate(group = case_when(
+    species %in% c("PSEMEN", "PINJEF", "CALDEC", "PINJEF", "ABICON") ~ "Gymnosperm",
+    TRUE~ as.character("Angiosperm")
+  ))
+# ============================
+# Mixed-effects model (random intercept for study)
+# ============================
+mod_spp_group <- lmer(ilfm ~ mwp * group + (1|species),
+                      data = df2, REML = T)
+
+summary(mod_spp_group)
+
+# Load necessary libraries
+library(broom.mixed)
+library(dplyr)
+library(here)
+
+# 1. Tidy the model output
+# 'tidy' extracts coefficients, standard errors, and t-values
+model_results <- tidy(mod_spp_group) 
+
+# 2. Add a column for the Model Formula for your records
+model_results <- model_results %>%
+  mutate(formula = "ilfm ~ mwp * group + (1 | species)")
+
+# 3. Save to CSV
+# Using here() to ensure it goes into your project folder
+write.csv(model_results, 
+          file = here("results", "figures", "TableSX_gymno_angio.csv"), 
+          row.names = FALSE)
+
+# ---------------------------------------------------------
+# Optional: If you want JUST the Fixed Effects in a 
+# "publication ready" wide format
+# ---------------------------------------------------------
+fixed_effects_wide <- tidy(mod_spp_group, effects = "fixed") %>%
+  select(term, estimate, std.error, statistic)
+
+write.csv(fixed_effects_wide, 
+          file = here("results", "figures", "TableSX_wide_gymno_angio.csv"), 
+          row.names = FALSE)
+
+anova(mod_spp_group)
+```
+
 
 #Concept dataframes:
 
@@ -2094,8 +2153,6 @@ figSX
 
 ggsave(plot = figSX, here::here("figures", "figSX_selectspp.jpg"), dpi = 600, height = 4, width = 5, units = "in")
 ```
-
-
 
 ####Figure S1., colored by species
 ```{r, figure1}

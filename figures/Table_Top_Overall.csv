@@ -1,0 +1,10 @@
+"Model","AIC","Delta_AIC","In_Sample_R2","Cross_Val_R2"
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla",-161.5,0,0.757,0.61
+"F.Type + lfmmax + mwp + p50 + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla",-160.2,1.3,0.757,0.572
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x sla + mwp x tlp",-160,1.5,0.758,0.6
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + lfmmax x mwp +      mwp x psimin + mwp x sla",-159.9,1.5,0.758,0.603
+"F.Type + lfmmax + mwp + sla + tlp +      F.Type x mwp + lfmmax x mwp + mwp x sla",-159.7,1.8,0.757,0.572
+"F.Type + ldmc + lfmmax + mwp + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla",-159.7,1.8,0.757,0.58
+"F.Type + lfmmax + mwp + psimin + sla + tlp +      (1 | species) + F.Type x mwp + mwp x psimin +      mwp x sla + mwp x tlp",-159.6,1.8,0.758,0.596
+"F.Type + lfmmax + mwp + p50 + psimin + sla +      tlp + F.Type x mwp + lfmmax x mwp +      mwp x sla",-159.5,2,0.757,0.562
+"Base (WP Only)",-55.2,106.3,0.724,0.407

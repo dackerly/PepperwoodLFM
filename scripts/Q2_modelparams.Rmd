@@ -12,6 +12,13 @@ source(here('scripts', 'lfm_functions.R'))
 
 Question: Across species, what are the contributions of initial LFM and minimum WP in explaining variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2)? 
 
+```{r}
+library(janitor)
+library(tidyverse)
+library(here)
+library(U.Taxonstand) 
+```
+
 #Q2: 
 
 ```{r}
@@ -72,13 +79,15 @@ concept_params_df <- read_csv(here::here("data", "concept_df.csv")) %>%
   clean_names()
 ```
 
+```{r}
+SpCodes <- read_csv(here("data", "SpCodes.csv")) %>%
+  mutate(species = SpCode6) %>% 
+  mutate(family = familyMatch(splist = c(Genus), taxon = "plant")$family)
+```
 
-#Figure 5a (param correlations):
+#Figure 7*:
 
 ```{r}
-#### Figure 5a (param correlations): significant ones, y = Minimum LFM (shared across panels)
-
-
 make_lm_plot <- function(df, xvar, yvar, xlab, ylab,
                          eq_x = NULL, eq_y = NULL, eq_col = "black") {
 
@@ -109,14 +118,14 @@ make_lm_plot <- function(df, xvar, yvar, xlab, ylab,
     color_species +
    scale_shape_manual(
   values = c(
-    "angiosperm" = 16,  # filled circle
-    "gymnosperm" = 17   # filled triangle
+    "Angiosperm" = 16,  # filled circle
+    "Conifer" = 17   # filled triangle
   )
 ) +
     labs(x = xlab, 
          y = ylab, 
          color = "Species", 
-         shape = "Functional Type") +
+         shape = "Plant Type") +
     theme(legend.position = "right") +
    theme(
   legend.text  = element_text(size = 8),
@@ -131,7 +140,13 @@ make_lm_plot <- function(df, xvar, yvar, xlab, ylab,
 library(dplyr)
 library(cowplot)
 
-df_plot <- concept_params_df %>% filter(group == "species")
+df_plot <- concept_params_df %>% 
+  filter(group == "species") %>%
+  mutate(
+    functional_type = case_when(
+      functional_type %in% c("gymnosperm") ~ "Conifer", 
+      TRUE ~ as.character("Angiosperm")))
+    
 
 # Shared y-limits across both panels (Minimum LFM)
 ylims_minlfm <- range(df_plot$minlfm*100, na.rm = TRUE)
@@ -142,7 +157,7 @@ fig4f_yminlfm <- make_lm_plot(
   xvar = "minwp",
   yvar = "minlfm",
   xlab = expression(Psi[MDmin]~"(MPa)"),
-  ylab = "Minimum LFM (%)"
+  ylab = "LFMmin (%)"
 ) +
   coord_cartesian(ylim = ylims_minlfm)
 
@@ -151,8 +166,8 @@ fig4g_yminlfm <- make_lm_plot(
   df_plot,
   xvar = "slope",
   yvar = "minlfm",
-  xlab = "Model Slope",
-  ylab = "Minimum LFM (%)"
+  xlab = "Slope",
+  ylab = "LFMmin (%)"
 ) +
   coord_cartesian(ylim = ylims_minlfm)
 
@@ -197,10 +212,10 @@ plots_fig4a_final
 
 ggsave(
   plot = plots_fig4a_final,
-  filename = here::here("figures", "fig4a.jpg"),
+  filename = here::here("figures", "fig7.jpg"),
   dpi = 600, 
   width = 7, 
-  height = 3.5
+  height = 3
 )
 
 ```
@@ -306,7 +321,7 @@ summary(m_lm_pct)
 ```
 
 
-#Fugure SX: model parameter correlations: 
+#Fugure S9*: model parameter correlations: 
 
 ```{r}
 library(dplyr)
@@ -997,6 +1012,178 @@ par(op)
 dev.off()
  
 ```
+####Use Intercept Max LFM
+
+```{r}
+library(dplyr)
+
+# ----------------------------
+# Build spres from parameters
+#   CHANGE: use max_lfm (from concept_params_df) instead of model intercept
+# ----------------------------
+spres <- concept_params_df %>%
+  filter(group == "grand") %>%
+  mutate(
+    model1.slp = slope,      # keep slope for conceptual lines
+    SpCode6    = species,
+    minWP      = minwp,
+    maxLFM     = intercept_lfm     # <-- NEW: use max_lfm directly
+  )
+
+# ----------------------------
+# Join Genus info (REQUIRED)
+#   Must contain columns: SpCode6, Genus
+# ----------------------------
+spres <- spres %>%
+  left_join(SpCodes %>% select(SpCode6, Genus), by = "SpCode6")
+
+if (any(is.na(spres$Genus))) {
+  warning("Some SpCode6 have no Genus in SpCodes.")
+}
+
+# ----------------------------
+# Generate conceptual curves
+# ----------------------------
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
+
+# (Optional) keep your per-species MWPcrit list (not used for plotting)
+MWPcrit_list <- list()
+for (sp in unique(spres$SpCode6)) {
+  species_slope_sp <- spres %>% filter(SpCode6 == sp) %>% pull(model1.slp)
+  MWPcrit <- numeric(length(ilfm.sat.vec))
+  for (i in seq_along(ilfm.sat.vec)) {
+    MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope_sp), 1 / 0.7)
+  }
+  MWPcrit_list[[sp]] <- MWPcrit
+}
+
+# Use a "typical" slope for drawing conceptual lines
+species_slope <- median(spres$model1.slp, na.rm = TRUE)
+
+# ----------------------------
+# Plot open
+# ----------------------------
+jpeg(
+  filename = here::here("figures", "Fig2_genus_LFMint.jpg"),
+  width    = 7,
+  height   = 4.5,
+  units    = "in",
+  res      = 300
+)
+
+op <- par(no.readonly = TRUE)
+par(mar = c(4, 4, 0.5, 6), mgp = c(2.2, 0.6, 0), xpd = TRUE)
+
+# ----------------------------
+# Colors by Genus
+# ----------------------------
+okabe_ito <- c("#17154f", "#f6b3b0", "#732f30", "#e69b00", "#5b859e", "#b38711",
+              "#6c5d9e", "#1e395f", "#e48171", "#bf3729", "#355828", "#ab84a5",
+              "#9d9cd5", "#ada43b", "#5b859e", "#75884b", "#df8d71", "#af4f2f",
+              "#d48f90", "#59385c", "#d8b847")
+
+genus_levels <- sort(unique(spres$Genus))
+ng <- length(genus_levels)
+genus_colors <- if (ng > length(okabe_ito)) {
+  grDevices::colorRampPalette(okabe_ito)(ng)
+} else {
+  okabe_ito[seq_len(ng)]
+}
+genus_cols <- setNames(genus_colors, genus_levels)
+
+# ----------------------------
+# Base curve at 70% (reference), scaled to percent for plotting
+# ----------------------------
+MWPcrit <- numeric(length(ilfm.sat.vec))
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.7)
+}
+lfm_pct <- (1 / ilfm.sat.vec) * 100
+
+plot(
+  MWPcrit, lfm_pct,
+  xlim = c(-8, 0.1), ylim = c(0, 400),
+  type = "n",
+  xlab = "Minimum Minimum Water Potential (MPa)",
+  ylab = "LFMintercept (%) @ Midday Water Potential = 0",
+  yaxt = "n"
+)
+axis(2, at = seq(0, 400, 100), labels = seq(0, 400, 100), las = 1)
+
+# --- 62% curve
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.62)
+}
+lines(MWPcrit, lfm_pct, lwd = 1.5, col = "maroon")
+text(tail(MWPcrit, 1), tail(lfm_pct, 1), labels = "60% LFM", pos = 1, col = "maroon", cex = 0.9)
+
+# --- 77% curve
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.77)
+}
+lines(MWPcrit, lfm_pct, lwd = 1.5, col = "goldenrod")
+text(tail(MWPcrit, 1), tail(lfm_pct, 1), labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.9)
+
+# ----------------------------
+# Assign unique letters per species (DO THIS BEFORE plotting text)
+# ----------------------------
+unique_species <- unique(spres$SpCode6)
+species_letters <- setNames(letters[seq_along(unique_species)], unique_species)
+spres$Letter <- species_letters[spres$SpCode6]
+
+letter_mapping <- data.frame(
+  Letter  = spres$Letter,
+  Species = spres$SpCode6
+) %>% distinct()
+
+# ----------------------------
+# Plot species letters colored by Genus
+#   CHANGE: y now comes from max_lfm (scaled to %)
+#   Assumes max_lfm is stored as fraction (e.g., 1.8 = 180%)
+#   If your max_lfm is already in percent, remove the *100 below.
+# ----------------------------
+text(
+  x = spres$minWP,
+  y = spres$maxLFM * 100,
+  labels = spres$Letter,
+  col = genus_cols[spres$Genus],
+  cex = 1
+)
+
+# ----------------------------
+# Legend (outside plot border, inside device)
+# ----------------------------
+legend_df <- data.frame(
+  Letter  = spres$Letter,
+  Species = spres$SpCode6,
+  Genus   = spres$Genus
+) %>% distinct()
+
+legend_text   <- paste0(legend_df$Letter, " - ", legend_df$Species)
+legend_colors <- genus_cols[legend_df$Genus]
+
+usr <- par("usr")
+x_off <- diff(usr[1:2]) * 0.02
+y_off <- diff(usr[3:4]) * 0.02
+
+legend(
+  x = usr[2] + x_off,
+  y = usr[4] - y_off,
+  xjust = 0, yjust = 1,
+  legend = legend_text,
+  text.col = legend_colors,
+  pch = 15, col = legend_colors,
+  bty = "n", cex = 0.8,
+  y.intersp = 0.9
+)
+
+par(op)
+dev.off()
+
+```
+
+
+
 ####Use actual Max LFM
 
 ```{r}
@@ -1508,7 +1695,7 @@ MWPcrit_77 <- make_MWPcrit(0.77, ilfm.sat.vec, species_slope)
 # Plot open
 # ----------------------------
 jpeg(
-  filename = here("figures", "Fig2_species.jpg"),
+  filename = here("figures", "Fig2_species_actualMax.jpg"),
   width = 7,
   height = 4.5,
   units = "in",
