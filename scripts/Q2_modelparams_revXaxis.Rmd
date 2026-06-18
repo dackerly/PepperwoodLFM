@@ -1,0 +1,1694 @@
+---
+title: "Q2"
+author: "Indra Boving"
+date: "2026-01-23"
+output: html_document
+---
+```{r}
+library(janitor)
+library(tidyverse)
+library(here)
+library(U.Taxonstand) 
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source(here('scripts', 'lfm_functions.R'))
+```
+
+Question: Across species, what are the contributions of initial LFM and minimum WP in explaining variation in minimum LFM observed at the end of the dry season (following the conceptual model in Figure 2)? 
+
+
+```{r, minwpvsmaxlfm}
+concept_params_df <- read_csv(here::here("data", "concept_df.csv")) %>% 
+  clean_names() %>% 
+  group_by(species) %>% 
+  mutate(minlfm = min(lfm, na.rm = T),
+         maxlfm = max(lfm, na.rm = T),
+         minwp = min(mwp, na.rm = T), 
+         maxwp = max(mwp, na.rm = T),
+         minilfm = 1/minlfm, 
+         intercept_lfm = 1/intercept,
+         maxlfm_minwp = -1*minwp + maxlfm
+         ) %>% 
+  merge(read_csv(here("data", "sp_info.csv"))) %>% 
+  clean_names()
+```
+
+#Q2: 
+
+```{r}
+color_species <- scale_color_manual(
+  values = c(
+    ABICON = "#17154f",
+    ADEFAS = "#2f357c",
+    ARBMEN = "#6c5d9e",
+    
+    ARCGLA = "#9d9cd5",
+    ARCPAT = "#b0799a",
+    CALDEC = "#59385c",
+    CEACUN = "#f6b3b0",
+    
+    CEAPAR = "#b38711",
+    CEASPI = "#e48171",
+    CERBET = "#d8b847",
+    
+    CEACOR = "#f6b3b0",
+    
+    ERIFAS = "#bf3729",
+    HETARB = "#e69b00",
+    
+    MALLAU = "#f5bb50",
+    PINJEF = "#ada43b",
+    PSEMEN = "#355828",
+    
+    QUEAGR = "#5b859e",
+    QUEBER = "#1e395f",
+    QUEDOU = "#75884b",
+    
+    QUEDUR = "#1e5a46",
+    QUEGAR = "#df8d71",
+    QUEKEL = "#af4f2f",
+    
+    SALLEU = "#d48f90",
+    SALMEL = "#732f30",
+    UMBCAL = "#d8b847"
+  ),
+  drop = FALSE
+)
+```
+
+
+```{r, minwpvsmaxlfm}
+concept_params_df <- read_csv(here::here("data", "concept_df.csv")) %>% 
+  clean_names() %>% 
+  group_by(species) %>% 
+  mutate(minlfm = min(lfm, na.rm = T),
+         maxlfm = max(lfm, na.rm = T),
+         minwp = min(mwp, na.rm = T), 
+         maxwp = max(mwp, na.rm = T),
+         minilfm = 1/minlfm, 
+         intercept_lfm = 1/intercept,
+         maxlfm_minwp = -1*minwp + maxlfm
+         ) %>% 
+  merge(read_csv(here("data", "sp_info.csv"))) %>% 
+  clean_names()
+```
+
+```{r}
+SpCodes <- read_csv(here("data", "SpCodes.csv")) %>%
+  mutate(species = SpCode6) %>% 
+  mutate(family = familyMatch(splist = c(Genus), taxon = "plant")$family)
+```
+
+#Figure 7*:
+
+```{r}
+make_lm_plot <- function(df, xvar, yvar, xlab, ylab,
+                         eq_x = NULL, eq_y = NULL, eq_col = "black") {
+
+  model <- lm(reformulate(xvar, yvar), data = df)
+  eqn <- paste0(
+    "y = ", round(coef(model)[2], 3), "x + ", round(coef(model)[1], 3),
+    "\nR² = ", round(summary(model)$r.squared, 3),
+    "\np = ", signif(summary(model)$coefficients[2, 4], 3)
+  )
+
+  # defaults: upper-left-ish in data space
+  if (is.null(eq_x)) eq_x <- min(df[[xvar]], na.rm = TRUE)
+  if (is.null(eq_y)) eq_y <- max(df[[yvar]], na.rm = TRUE)
+
+ ggplot(df, aes(
+  x = .data[[xvar]],
+  y = .data[[yvar]]*100,
+  color = species
+)) +
+
+    geom_point(size = 2, aes(shape = functional_type)) +
+    geom_smooth(method = "lm", se = FALSE, color = eq_col) +
+    annotate(
+      "text", x = eq_x, y = eq_y, label = eqn,
+      hjust = 0, vjust = 1, size = 3.5,
+      color = eq_col, fontface = "italic"
+    ) +
+    color_species +
+   scale_shape_manual(
+  values = c(
+    "Angiosperm" = 16,  # filled circle
+    "Conifer" = 17   # filled triangle
+  )
+) +
+    labs(x = xlab, 
+         y = ylab, 
+         color = "Species", 
+         shape = "Plant Type") +
+    theme(legend.position = "right") +
+   theme(
+  legend.text  = element_text(size = 8),
+  legend.title = element_text(size = 9),
+  legend.key.size = unit(0.5, "lines") +
+    theme(
+  plot.margin = margin(5, 5, 5, 5)  # top, right, bottom, left (pt)
+)
+)
+}
+
+library(dplyr)
+library(cowplot)
+
+df_plot <- concept_params_df %>% 
+  filter(group == "species") %>%
+  mutate(
+    functional_type = case_when(
+      functional_type %in% c("gymnosperm") ~ "Conifer", 
+      TRUE ~ as.character("Angiosperm")))
+    
+
+# Shared y-limits across both panels (Minimum LFM)
+ylims_minlfm <- range(df_plot$minlfm*100, na.rm = TRUE)
+
+# --- Panel A: Minimum LFM vs Minimum WP ---
+fig4f_yminlfm <- make_lm_plot(
+  df_plot,
+  xvar = "minwp",
+  yvar = "minlfm",
+  xlab = expression(Psi[MDmin]~"(MPa)"),
+  ylab = "LFMmin (%)"
+) +
+  coord_cartesian(ylim = ylims_minlfm)
+
+# --- Panel B: Minimum LFM vs Model Slope ---
+fig4g_yminlfm <- make_lm_plot(
+  df_plot,
+  xvar = "slope",
+  yvar = "minlfm",
+  xlab = "Slope",
+  ylab = "LFMmin (%)"
+) +
+  coord_cartesian(ylim = ylims_minlfm)
+
+# Legend (same as before)
+legend <- get_legend(
+  fig4f_yminlfm + theme(legend.box.margin = margin(0, 0, 5, 0)) +
+    theme(
+      legend.position = "right",
+      legend.key = element_blank(),
+      legend.background = element_blank(),
+      legend.box.background = element_blank()
+    )
+)
+
+# Combine with shared y scale + single y-axis labeling
+plots_fig4a <- plot_grid(
+  fig4f_yminlfm +
+    theme(
+      legend.position = "none",
+      plot.margin = margin(5, 2, 5, 5)
+    ),
+  fig4g_yminlfm +
+    theme(
+      legend.position = "none",
+      axis.title.y = element_blank(),
+      axis.text.y  = element_blank(),
+      axis.ticks.y = element_blank(),
+      plot.margin  = margin(5, 5, 5, 2)
+    ),
+  nrow = 1,
+  labels = LETTERS[1:2],
+  label_size = 14,
+  label_x = 0.02,   # move A/B inside panel
+  label_y = 0.96,
+  hjust = 0,
+  vjust = 1,
+  rel_widths = c(1, .85)
+)
+
+plots_fig4a_final <- plot_grid(plots_fig4a, legend, rel_widths = c(1, .25), nrow = 1)
+plots_fig4a_final
+
+ggsave(
+  plot = plots_fig4a_final,
+  filename = here::here("figures", "fig7.jpg"),
+  dpi = 600, 
+  width = 7, 
+  height = 3
+)
+
+```
+Stats for the above: 
+```{r}
+#Slope and minLFM
+spp_df <- df_plot
+
+# ---- 1) Clean + create percent minLFM (optional) ----
+dat <- spp_df %>%
+  filter(is.finite(slope), is.finite(minlfm)) %>%
+  mutate(
+    minlfm_pct = minlfm * 100
+  )
+
+# ---- 2) Pearson + Spearman correlations ----
+pear <- cor.test(dat$slope, dat$minlfm, method = "pearson")
+spear <- cor.test(dat$slope, dat$minlfm, method = "spearman", exact = FALSE)
+
+pear
+spear
+
+# Helper to print a clean one-liner you can paste into text
+cat(
+  sprintf(
+    "\nPearson r = %.3f (95%% CI %.3f to %.3f), p = %.3g, n = %d\n",
+    unname(pear$estimate), pear$conf.int[1], pear$conf.int[2], pear$p.value, nrow(dat)
+  )
+)
+
+cat(
+  sprintf(
+    "Spearman rho = %.3f, p = %.3g, n = %d\n\n",
+    unname(spear$estimate), spear$p.value, nrow(dat)
+  )
+)
+# ---- 3) Simple linear regression + R2 ----
+m_lm <- lm(minlfm ~ slope, data = dat)
+summary(m_lm)
+
+r2 <- summary(m_lm)$r.squared
+cat(sprintf("Linear model: minlfm ~ slope, R^2 = %.3f\n\n", r2))
+
+# Also tidy output (nice for tables)
+lm_tidy <- broom::tidy(m_lm, conf.int = TRUE)
+lm_glance <- broom::glance(m_lm)
+lm_tidy
+lm_glance
+
+# Optional: regression using percent on y-axis (same p-values, different scale)
+m_lm_pct <- lm(minlfm_pct ~ slope, data = dat)
+summary(m_lm_pct)
+```
+
+```{r}
+#Minmpa and minLFM
+spp_df <- df_plot
+
+# ---- 1) Clean + create percent minLFM (optional) ----
+dat <- spp_df %>%
+  filter(is.finite(minwp), is.finite(minlfm)) %>%
+  mutate(
+    minlfm_pct = minlfm * 100
+  )
+
+# ---- 2) Pearson + Spearman correlations ----
+pear <- cor.test(dat$minwp, dat$minlfm, method = "pearson")
+spear <- cor.test(dat$minwp, dat$minlfm, method = "spearman", exact = FALSE)
+
+pear
+spear
+
+# Helper to print a clean one-liner you can paste into text
+cat(
+  sprintf(
+    "\nPearson r = %.3f (95%% CI %.3f to %.3f), p = %.3g, n = %d\n",
+    unname(pear$estimate), pear$conf.int[1], pear$conf.int[2], pear$p.value, nrow(dat)
+  )
+)
+
+cat(
+  sprintf(
+    "Spearman rho = %.3f, p = %.3g, n = %d\n\n",
+    unname(spear$estimate), spear$p.value, nrow(dat)
+  )
+)
+# ---- 3) Simple linear regression + R2 ----
+m_lm <- lm(minlfm ~ minwp, data = dat)
+summary(m_lm)
+
+r2 <- summary(m_lm)$r.squared
+cat(sprintf("Linear model: minlfm ~ minwp, R^2 = %.3f\n\n", r2))
+
+# Also tidy output (nice for tables)
+lm_tidy <- broom::tidy(m_lm, conf.int = TRUE)
+lm_glance <- broom::glance(m_lm)
+lm_tidy
+lm_glance
+
+# Optional: regression using percent on y-axis (same p-values, different scale)
+m_lm_pct <- lm(minlfm_pct ~ minwp, data = dat)
+summary(m_lm_pct)
+```
+
+
+#Fugure S9*: model parameter correlations: 
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(here)
+
+# ============================
+# Compare model parameters only
+#   - makes a params × params correlation heatmap
+#   - runs once per dataset (with/without salvias)
+# ============================
+
+# ----------------------------
+# Pick vars (model params only)
+# ----------------------------
+model_params <- c("minlfm", "maxlfm", "intercept_lfm", "slope", "minwp")
+
+# ----------------------------
+# Nice labels (edit however you want)
+# ----------------------------
+nice_names <- c(
+  minlfm       = "LFMmin",
+  maxlfm       = "LFMmax",
+  intercept_lfm = "Intercept (LFM)",
+  slope         = "Slope",
+  minwp        = "Min Ψmd"
+)
+
+# ----------------------------
+# Helper: pairwise cor.test p-values (handles NAs per pair)
+# ----------------------------
+pairwise_cor_p <- function(df, vars, method = "pearson") {
+  pairs <- t(combn(vars, 2))
+  out <- tibble(
+    x = pairs[, 1],
+    y = pairs[, 2]
+  ) %>%
+    rowwise() %>%
+    mutate(
+      n = sum(is.finite(df[[x]]) & is.finite(df[[y]])),
+      test = list({
+        xx <- df[[x]]
+        yy <- df[[y]]
+        ok <- is.finite(xx) & is.finite(yy)
+        if (sum(ok) < 3) return(NULL)
+        suppressWarnings(cor.test(xx[ok], yy[ok], method = method))
+      }),
+      r = if (is.null(test)) NA_real_ else unname(test$estimate),
+      p = if (is.null(test)) NA_real_ else test$p.value
+    ) %>%
+    ungroup()
+
+  # mirror to full matrix (x,y) and (y,x), plus diagonal
+  diag_df <- tibble(x = vars, y = vars, n = NA_integer_, r = 1, p = NA_real_)
+  bind_rows(
+    out,
+    out %>% transmute(x = y, y = x, n = n, r = r, p = p),
+    diag_df
+  )
+}
+
+# ----------------------------
+# Make one plot function so you don't repeat code
+# ----------------------------
+plot_param_cor <- function(dat, outfile, method = "pearson") {
+
+  plot_df <- dat %>%
+    select(all_of(model_params)) %>%
+    mutate(across(everything(), as.numeric)) %>%
+    { pairwise_cor_p(., vars = model_params, method = method) } %>%
+    mutate(
+      x_lab = nice_names[x],
+      y_lab = nice_names[y],
+      stars = case_when(
+        is.na(p) ~ "",
+        p < 0.001 ~ "***",
+        p < 0.01  ~ "**",
+        p < 0.05  ~ "*",
+        TRUE ~ ""
+      ),
+      label = case_when(
+        x == y ~ "r=1",
+        is.na(p) ~ "NA",
+        TRUE ~ paste0("r=", round(r, 2), "\n",
+                      "p=", format.pval(p, digits = 2, eps = 1e-3), "\n", stars)
+      )
+    ) %>%
+    mutate(
+      x_lab = factor(x_lab, levels = nice_names[model_params]),
+      # keep same ordering on y, but reverse so first param is top row
+      y_lab = factor(y_lab, levels = rev(nice_names[model_params]))
+    )
+
+  p <- ggplot(plot_df, aes(x = x_lab, y = y_lab, fill = r)) +
+    geom_tile(color = "white", linewidth = 0.4) +
+    geom_text(aes(label = label), size = 3, lineheight = 0.9) +
+    scale_fill_gradient2(
+      low = "#2c2c2c", mid = "white", high = "#b22222",
+      limits = c(-1, 1), oob = squish, name = "Pearson r"
+    ) +
+    labs(x = NULL, y = NULL) +
+    theme(
+      panel.grid = element_blank(),
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+      legend.key.height = unit(1.2, "lines")
+    )
+
+  ggsave(
+    filename = outfile,
+    plot = p,
+    width = 5.5,
+    height = 5,
+    units = "in"
+  )
+
+  p
+}
+
+# ----------------------------
+# Run it: with salvias
+# ----------------------------
+p_params_with <- plot_param_cor(
+  dat = df_plot,
+  outfile = here("figures", "modelparams_correlation_with_salvias.jpeg")
+)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(here)
+library(GGally)
+
+# ----------------------------
+# Pick vars (model params only)
+# ----------------------------
+model_params <- c("minlfm", "maxlfm", "intercept_lfm", "slope", "minwp")
+
+# ----------------------------
+# Nice labels
+# ----------------------------
+nice_names <- c(
+  minlfm        = "LFMmin",
+  maxlfm        = "LFMmax",
+  intercept_lfm = "Intercept (LFM)",
+  slope         = "Slope",
+  minwp         = "Min Ψmd"
+)
+
+# ----------------------------
+# One plot: ggpairs
+#   - lower: correlation tiles (with r and p)
+#   - upper: scatterplots
+# ----------------------------
+plot_param_pairs <- function(dat, outfile, method = "pearson") {
+
+  method_use <- method  # capture once to avoid recursive default arg issues
+
+  dat_use <- dat %>%
+    select(all_of(model_params)) %>%
+    mutate(across(everything(), as.numeric)) %>%
+    rename_with(~ nice_names[.x], all_of(model_params))  # prettier labels
+
+  # ---- lower triangle: correlation tile ----
+  cor_tile <- function(data, mapping, ...) {
+    x <- GGally::eval_data_col(data, mapping$x)
+    y <- GGally::eval_data_col(data, mapping$y)
+
+    ok <- is.finite(x) & is.finite(y)
+    if (sum(ok) < 3) {
+      return(
+        ggplot() +
+          theme_void() +
+          annotate("text", x = 0.5, y = 0.5, label = "NA")
+      )
+    }
+
+    ct <- suppressWarnings(cor.test(x[ok], y[ok], method = method_use))
+    r  <- unname(ct$estimate)
+    p  <- ct$p.value
+
+    stars <- dplyr::case_when(
+      p < 0.001 ~ "***",
+      p < 0.01  ~ "**",
+      p < 0.05  ~ "*",
+      TRUE ~ ""
+    )
+
+    label <- paste0(
+      "r=", round(r, 2), "\n",
+      "p=", format.pval(p, digits = 2, eps = 1e-3), "\n", stars
+    )
+
+    ggplot() +
+      geom_tile(aes(x = 1, y = 1, fill = r), color = "white", linewidth = 0.4) +
+      geom_text(aes(x = 1, y = 1, label = label), size = 3, lineheight = 0.9) +
+      scale_fill_gradient2(
+        low = "#2c2c2c", mid = "white", high = "#b22222",
+        limits = c(-1, 1), oob = squish
+      ) +
+      theme_void() +
+      theme(legend.position = "none")
+  }
+
+  # ---- upper triangle: scatter ----
+  scat_panel <- function(data, mapping, ...) {
+    ggplot(data = data, mapping = mapping) +
+      geom_point(alpha = 0.7, size = 1) +
+      theme(
+        panel.grid = element_blank(),
+        axis.title = element_blank()
+      )
+  }
+
+  # ---- diagonal: density (or swap to points if you prefer) ----
+  diag_density <- function(data, mapping, ...) {
+    ggplot(data = data, mapping = mapping) +
+      geom_density(linewidth = 0.6, adjust = 1.2) +
+      theme(
+        panel.grid = element_blank(),
+        axis.title = element_blank()
+      )
+  }
+
+  g <- GGally::ggpairs(
+    dat_use,
+    upper = list(continuous = scat_panel),
+    lower = list(continuous = cor_tile),
+    diag  = list(continuous = diag_density)
+  ) +
+    theme(
+      panel.grid = element_blank(),
+      strip.text = element_text(size = 10),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "right"
+    )
+
+  ggsave(outfile, g, width = 7.5, height = 7.5, units = "in")
+  g
+}
+
+# ----------------------------
+# Run once
+# ----------------------------
+p_params <- plot_param_pairs(
+  dat = df_plot,
+  outfile = here("figures", "modelparams_pairs_scatter_corr.jpeg")
+)
+
+```
+
+
+####Figure 5. (isocline)
+
+Using common slope for all species: 
+
+```{r, fig.height=4, fig.width=6}
+# Read species results
+# spres_old <- read.csv(here('results', 'species-results.csv'))
+
+# Ensure 'spres' has all the necessary columns from the previous steps
+spres <- concept_params_df %>% 
+  filter(group == "grand") %>% 
+  mutate(model1.int = intercept,
+         model1.slp = slope,  # Ensure slope is named 'model1.slp'
+         SpCode6 = species, 
+         minWP = minwp)
+
+# Inspect the modified dataframe
+head(spres)
+
+# Generate a sequence of inverse LFM saturation values
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
+
+# Initialize an empty list to store critical MWP values for each species
+MWPcrit_list <- list()
+
+# Loop through each unique species and calculate the critical MWP using species-specific slopes
+for (sp in unique(spres$species)) {
+  
+  # Get the species-specific slope from 'spres'
+  species_slope <- spres %>% 
+    filter(species == sp) %>% 
+    pull(model1.slp)
+  
+  # Initialize a vector to hold critical MWP values for the current species
+  MWPcrit <- c()
+  
+  # Calculate critical MWP for the current species
+  for (i in 1:length(ilfm.sat.vec)) {
+    MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.7)  # Use species-specific slope
+  }
+  
+  # Store the results for each species in the list
+  MWPcrit_list[[sp]] <- MWPcrit
+}
+
+# Convert inverse LFM saturation values back to LFM
+lfm.sat.vec <- 1 / ilfm.sat.vec
+
+# Step 7: Plot the conceptual model curve
+plot(MWPcrit, lfm.sat.vec, 
+     xlim = c(-8, 0), ylim = c(0, 4),
+     type = 'l', lwd = 0, col = "blue",
+     xlab = 'Minimum Midday Water Potential (MPa)', 
+     ylab = 'LFM @ Midday Water Potential = 0')
+
+# Step 8: Repeat the calculations for different LFM thresholds
+
+# 60% LFM
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.62)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "maroon")
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "60% LFM", pos = 4, col = "maroon", cex = 0.8)
+
+# 77% LFM
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.77)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "goldenrod")
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.8)
+
+# 88% LFM
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.88)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "forestgreen")
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "88% LFM", pos = 2, col = "forestgreen", cex = 0.8)
+
+# Step 9: Add species data points to the conceptual model plot
+# text(I(1 / model1.int) ~ minWP,
+#      data = spres,
+#      labels = spres$SpCode6,
+#      pos = 4,
+#      cex = 0.6) # Reduced text size to prevent overlap
+
+# Assign unique letters to unique species
+unique_species <- unique(spres$SpCode6)
+species_letters <- setNames(letters[1:length(unique_species)], unique_species)
+
+# Add a new column in 'spres' mapping species to their assigned letters
+spres$Letter <- species_letters[spres$SpCode6]
+
+# Create a letter-to-species lookup table
+letter_mapping <- data.frame(
+  Letter = spres$Letter,
+  Species = spres$SpCode6
+) %>% distinct()  # Ensure each species appears only once
+
+# Define color palette for species
+color_species = c(
+    ABICON = "#17154f",
+    ADEFAS = "#2f357c",
+    ARBMEN = "#6c5d9e",
+    
+    ARCGLA = "#9d9cd5",
+    ARCPAT = "#b0799a",
+    CALDEC = "#59385c",
+    CEACUN = "#f6b3b0",
+    
+    CEAPAR = "#b38711",
+    CEASPI = "#e48171",
+    CERBET = "#d8b847",
+    
+    ERIFAS = "#bf3729",
+    HETARB = "#e69b00",
+    
+    MALLAU = "#f5bb50",
+    PINJEF = "#ada43b",
+    PSEMEN = "#355828",
+    
+    QUEAGR = "#5b859e",
+    QUEBER = "#1e395f",
+    QUEDOU = "#75884b",
+    
+    QUEDUR = "#1e5a46",
+    QUEGAR = "#df8d71",
+    QUEKEL = "#af4f2f",
+    
+    SALLEU = "#d48f90",
+    SALMEL = "#732f30",
+    UMBCAL = "#d8b847"
+  )
+
+species_cols <- color_species #so it works with isocline 
+# Ensure we have enough colors for all unique species
+color_species <- setNames(color_species[1:length(unique_species)], unique_species)
+
+# Add species-specific labels at the correct locations
+text(spres$minWP, 1 / spres$model1.int,  # (x, y) coordinates
+     labels = spres$Letter,                # Assign unique letters instead of species codes
+     col = color_species[spres$SpCode6],  # Assign colors by species
+     #pos = 5,                               # Adjust text positioning
+     cex = 1)                             # Adjust text size to avoid overlap
+
+```
+To save the isocline: 
+```{r}
+# Save base R plot as high-resolution JPEG
+jpeg(filename = here::here("figures", "fig4.jpg"), 
+     width = 5, height = 4, units = "in", res = 600)
+
+# Reduce whitespace: bottom, left, top, right margins
+par(mar = c(3.5, 3.5, 1, 1), mgp = c(2, 0.6, 0))  # mgp controls label spacing
+# Re-run the plotting code below to draw inside the jpeg device
+
+# Step 7: Plot the conceptual model curve
+plot(MWPcrit, lfm.sat.vec, 
+     xlim = c(-8, 0), ylim = c(0, 4),
+     type = 'l', lwd = 0, col = "blue",
+     xlab = 'Minimum Midday Water Potential (MPa)', 
+     ylab = 'LFM @ Midday Water Potential = 0')
+
+# 60% LFM line
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.62)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "maroon")
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "60% LFM", pos = 4, col = "maroon", cex = 0.8)
+
+# 77% LFM line
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.77)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "goldenrod")
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.8)
+
+# 88% LFM line
+for (i in 1:length(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.88)
+}
+lfm.sat.vec <- 1 / ilfm.sat.vec
+lines(MWPcrit, lfm.sat.vec, lwd = 1, col = "forestgreen")
+text(MWPcrit[length(MWPcrit)], lfm.sat.vec[length(lfm.sat.vec)], labels = "88% LFM", pos = 2, col = "forestgreen", cex = 0.8)
+
+# Add species labels (letters)
+text(spres$minWP, 1 / spres$model1.int,
+     labels = spres$Letter,
+     col = color_species[spres$SpCode6],
+     cex = 1)
+
+# Close the jpeg device
+dev.off()
+
+# Print letter-to-species mapping table
+print(letter_mapping)
+
+# Load necessary package
+library(knitr)
+
+# Print the letter-to-species mapping as a formatted table
+letter_mapping %>% 
+  kable(format = "pipe", col.names = c("Letter", "Species"))
+
+write.csv(letter_mapping, file = here::here("figures", "letter_mapping.csv"), row.names = FALSE)
+```
+To save isocline labels: 
+
+```{r}
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(here)
+
+# Create the colored table
+letter_mapping_colored <- letter_mapping %>%
+  mutate(Letter = paste0("<span style='color:", color_species[Species], "'>", Letter, "</span>"))
+
+# Generate the HTML table
+table_html <- letter_mapping_colored %>%
+  kable("html", escape = FALSE, col.names = c("Letter", "Species")) %>%
+  kable_styling(full_width = FALSE, position = "left")
+
+# Build full HTML page with styling for 2-column layout and smaller text
+html_page <- paste0(
+  "<!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset='UTF-8'>
+    <title>Letter Mapping</title>
+    <style>
+      body {
+        font-size: 0.85em;
+        column-count: 2;
+        column-gap: 2em;
+        font-family: sans-serif;
+      }
+      table {
+        margin-bottom: 1em;
+        break-inside: avoid;
+      }
+    </style>
+  </head>
+  <body>",
+  table_html,
+  "</body>
+  </html>"
+)
+
+# Save to file
+writeLines(html_page, here("figures", "letter_mapping.html"))
+```
+
+####Figure 5, (genus)
+```{r}
+library(dplyr)
+
+# ----------------------------
+# Build spres from parameters
+# ----------------------------
+spres <- concept_params_df %>% 
+  filter(group == "grand") %>% 
+  mutate(
+    model1.int = intercept,
+    model1.slp = slope,      # slope column for convenience
+    SpCode6    = species, 
+    minWP      = minwp
+  )
+
+# ----------------------------
+# Join Genus info (REQUIRED)
+#   - Replace `species_key_df` with your actual table name
+#   - Must contain columns: SpCode6, Genus
+# ----------------------------
+spres <- spres %>%
+  left_join(SpCodes %>% select(SpCode6, Genus), by = "SpCode6")
+
+# Optional check for any species missing a Genus
+if (any(is.na(spres$Genus))) {
+  warning("Some SpCode6 have no Genus in species_key_df.")
+}
+
+# ----------------------------
+# Generate conceptual curves
+# ----------------------------
+ilfm.sat.vec <- seq(0.25, 1.25, length.out = 31)
+
+# If you truly want species-specific MWPcrit per species, your list builder is fine.
+# Keeping for completeness (not used directly in the plot below):
+
+MWPcrit_list <- list()
+for (sp in unique(spres$species)) {
+  species_slope <- spres %>% filter(species == sp) %>% pull(model1.slp)
+  MWPcrit <- numeric(length(ilfm.sat.vec))
+  for (i in seq_along(ilfm.sat.vec)) {
+    MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1 / 0.7)
+  }
+  MWPcrit_list[[sp]] <- MWPcrit
+}
+
+# Use a "typical" slope for drawing the conceptual lines (so code below is robust).
+# If you prefer a different summary (mean, a specific species, etc.), change here:
+species_slope <- median(spres$model1.slp, na.rm = TRUE)
+
+# ----------------------------
+# Plot open: 
+# ----------------------------
+
+# Open JPEG device
+jpeg(
+  filename = here::here("figures", "Fig2_genus.jpg"),
+  width    = 7,   
+  height   = 4.5,     
+  units    = "in",
+  res      = 300    # high resolution
+)
+
+
+## 1) Make room on the right (set before plotting)
+
+op <- par(no.readonly = TRUE)                  # save current par
+# Tight margins + space for legend in right margin
+par(mar = c(4, 4, 0.5, 6), mgp = c(2.2, 0.6, 0), xpd = TRUE) # add right margin & allow drawing in margins
+
+# ----------------------------
+# Colors by Genus (CHANGE HERE)
+# ----------------------------
+# Okabe–Ito palette; expand if more genera than base colors
+okabe_ito <- c("#17154f", "#f6b3b0",  "#732f30", "#e69b00", "#5b859e", "#b38711", "#6c5d9e",  "#1e395f", "#e48171", "#bf3729",  "#355828", "#ab84a5","#9d9cd5", "#ada43b", "#5b859e", "#75884b", "#df8d71", "#af4f2f", "#d48f90", "#59385c", "#d8b847")
+
+genus_levels <- sort(unique(spres$Genus))
+ng <- length(genus_levels)
+genus_colors <- if (ng > length(okabe_ito)) {
+  grDevices::colorRampPalette(okabe_ito)(ng)
+} else {
+  okabe_ito[seq_len(ng)]
+}
+genus_cols <- setNames(genus_colors, genus_levels)
+# ----------------------------
+# Base curve at 70% (reference), multiplied by 100
+# ----------------------------
+# --- Build the base (70%) reference once, then scale y to percent for plotting
+MWPcrit <- numeric(length(ilfm.sat.vec))
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1/0.7)
+}
+lfm_pct <- (1 / ilfm.sat.vec) * 100  # scale to percent for plotting
+
+plot(
+  MWPcrit, lfm_pct,
+  xlim = c(-8, 0.1), ylim = c(0, 400),
+  type = "l", lwd = 0, col = "blue",
+  xlab = "Minimum Midday Water Potential (MPa)",
+  ylab = "LFM (%) @ Midday Water Potential = 0",
+  yaxt = "n"
+)
+axis(2, at = seq(0, 400, 100), labels = seq(0, 400, 100), las = 1)
+
+# --- 60% LFM curve (x depends on threshold; y is the same lfm_pct scale)
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1/0.62)
+}
+lines(MWPcrit, lfm_pct, lwd = 1.5, col = "maroon")
+text(tail(MWPcrit, 1), tail(lfm_pct, 1), labels = "60% LFM", pos = 1, col = "maroon", cex = 0.9)
+
+# --- 77% LFM curve
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1/0.77)
+}
+lines(MWPcrit, lfm_pct, lwd = 1.5, col = "goldenrod")
+text(tail(MWPcrit, 1), tail(lfm_pct, 1), labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.9)
+
+# --- 88% LFM curve
+for (i in seq_along(ilfm.sat.vec)) {
+  MWPcrit[i] <- solveForX(c(ilfm.sat.vec[i], species_slope), 1/0.88)
+}
+lines(MWPcrit, lfm_pct, lwd = 1.5, col = "forestgreen")
+text(tail(MWPcrit, 1), tail(lfm_pct, 1), labels = "88% LFM", pos = 2, col = "forestgreen", cex = 0.9)
+
+# --- Species letters (also scaled to percent on y)
+text(
+  x = spres$minWP,
+  y = (1 / spres$model1.int) * 100,
+  labels = spres$Letter,
+  col = genus_cols[spres$Genus],
+  cex = 1
+)
+
+# ----------------------------
+# Assign unique letters per species (unchanged)
+# ----------------------------
+unique_species <- unique(spres$SpCode6)
+species_letters <- setNames(letters[seq_along(unique_species)], unique_species)
+spres$Letter <- species_letters[spres$SpCode6]
+
+# Lookup (if needed elsewhere)
+letter_mapping <- data.frame(
+  Letter  = spres$Letter,
+  Species = spres$SpCode6
+) %>% distinct()
+```
+
+
+###Figure 5, points & labels
+
+#####Species
+
+```{r}
+# ============================
+# Conceptual curves + species points (base R)
+#   - builds spres from concept_params_df
+#   - joins Genus from SpCodes
+#   - draws conceptual isoclines + species points colored by species
+#   - labels selected species (1 label per species)
+#   - writes a JPEG to /figures
+# ============================
+
+library(dplyr)
+library(here)
+
+# ----------------------------
+# Required helper (you said you already have this)
+# ----------------------------
+# solveForX <- function(cs, yval = 0.7) {
+#   # y = m*x + b
+#   return((yval - cs[1]) / cs[2])
+# }
+
+# ----------------------------
+# Species color palette (named vector)
+#   NOTE: make sure CEACOR is included
+# ----------------------------
+color_species <- c(
+  ABICON = "#17154f",
+  ADEFAS = "#2f357c",
+  ARBMEN = "#6c5d9e",
+  ARCGLA = "#9d9cd5",
+  ARCPAT = "#b0799a",
+  CALDEC = "#59385c",
+  CEACOR = "#f6b3b0",  # <- added (was missing)
+  CEACUN = "#f6b3b0",
+  CEAPAR = "#b38711",
+  CEASPI = "#e48171",
+  CERBET = "#d8b847",
+  ERIFAS = "#bf3729",
+  HETARB = "#e69b00",
+  MALLAU = "#f5bb50",
+  PINJEF = "#ada43b",
+  PSEMEN = "#355828",
+  QUEAGR = "#5b859e",
+  QUEBER = "#1e395f",
+  QUEDOU = "#75884b",
+  QUEDUR = "#1e5a46",
+  QUEGAR = "#df8d71",
+  QUEKEL = "#af4f2f",
+  SALLEU = "#d48f90",
+  SALMEL = "#732f30",
+  UMBCAL = "#d8b847"
+)
+
+# ----------------------------
+# Build spres from parameters
+# ----------------------------
+spres <- concept_params_df %>%
+  filter(group == "grand") %>%
+  mutate(
+    model1.int = intercept,
+    model1.slp = slope,
+    SpCode6    = species,
+    minWP      = minwp
+  ) %>%
+  left_join(SpCodes %>% select(SpCode6, Genus), by = "SpCode6")
+
+if (any(is.na(spres$Genus))) {
+  warning("Some SpCode6 have no Genus in SpCodes: ",
+          paste(unique(spres$SpCode6[is.na(spres$Genus)]), collapse = ", "))
+}
+
+# ----------------------------
+# Species colors aligned to data
+# ----------------------------
+species_levels <- sort(unique(spres$SpCode6))
+
+species_cols <- color_species[species_levels]
+missing_spp <- species_levels[is.na(species_cols)]
+if (length(missing_spp) > 0) {
+  warning("Missing species in color_species (will be grey50): ",
+          paste(missing_spp, collapse = ", "))
+  species_cols[is.na(species_cols)] <- "grey50"
+}
+names(species_cols) <- species_levels
+
+# ----------------------------
+# Generate conceptual curves
+# ----------------------------
+# Standard vector for Maroon and Goldenrod lines (caps at 350% LFM)
+ilfm.sat.vec <- seq(1 / 3.5, 1.25, length.out = 31)
+
+# Custom vector for the Green line: starts at 350% LFM (1/3.5) 
+# and ends exactly where x = 0 (which is 1 / 0.88)
+ilfm.sat.vec.green <- seq(1 / 3.5, 1 / 0.88, length.out = 31)
+
+# "Typical" slope for conceptual lines
+species_slope <- median(spres$model1.slp, na.rm = TRUE)
+
+# Base y scales corresponding to ilfm values
+lfm_pct       <- (1 / ilfm.sat.vec) * 100
+lfm_pct_green <- (1 / ilfm.sat.vec.green) * 100
+
+make_MWPcrit <- function(thresh, ilfm_vec, slope) {
+  out <- numeric(length(ilfm_vec))
+  for (i in seq_along(ilfm_vec)) {
+    out[i] <- solveForX(c(ilfm_vec[i], slope), 1 / thresh)
+  }
+  out
+}
+
+MWPcrit_60 <- make_MWPcrit(0.62, ilfm.sat.vec, species_slope)
+MWPcrit_77 <- make_MWPcrit(0.77, ilfm.sat.vec, species_slope)
+MWPcrit_88 <- make_MWPcrit(0.88, ilfm.sat.vec.green, species_slope) # Uses green vector
+
+# ----------------------------
+# Plot open
+# ----------------------------
+jpeg(
+  filename = here("figures", "Fig2_species.jpg"),
+  width = 7,
+  height = 4.5,
+  units = "in",
+  res = 300
+)
+
+op <- par(no.readonly = TRUE)
+par(mar = c(4, 4, 0.5, 7), mgp = c(2.2, 0.6, 0), xpd = TRUE)
+
+# ----------------------------
+# Set up plot (axes only)
+# ----------------------------
+plot(
+  x = MWPcrit_60, y = lfm_pct,
+  xlim = c(-8, 0.2), ylim = c(0, 400),
+  type = "n",
+  xlab = "Minimum Midday Water Potential (MPa)",
+  ylab = "LFM (%) @ Midday Water Potential = 0",
+  yaxt = "n"
+)
+axis(2, at = seq(0, 400, 50), labels = seq(0, 400, 50), las = 1)
+
+# ----------------------------
+# Draw conceptual curves
+# ----------------------------
+lines(MWPcrit_60, lfm_pct, lwd = 1.5, col = "maroon")
+text(MWPcrit_60[1], lfm_pct[1],
+     labels = "62% LFM", pos = 3, col = "maroon", cex = 0.9)
+
+lines(MWPcrit_77, lfm_pct, lwd = 1.5, col = "goldenrod")
+text(MWPcrit_77[1], lfm_pct[1],
+     labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.9)
+
+lines(MWPcrit_88, lfm_pct_green, lwd = 1.5, col = "forestgreen")
+text(MWPcrit_88[1], lfm_pct_green[1],
+     labels = "88% LFM", pos = 4, col = "forestgreen", cex = 0.9)
+
+# ----------------------------
+# Plot points (colored by species)
+# ----------------------------
+points(
+  x = spres$minWP,
+  y = (1 / spres$model1.int) * 100,
+  pch = 16,
+  cex = 1.1,
+  col = species_cols[spres$SpCode6]
+)
+
+# ----------------------------
+# Labels for selected species (one label per species)
+# ----------------------------
+label_spp <- c("PSEMEN", "UMBCAL", "ABCO", "PIJE", "PINJEF", "ABICON",
+                "CALDEC")
+
+special <- c("PIJE", "PINJEF", "CALDEC", "QUEKEL", "CEACOR")
+
+spres_lab <- spres %>%
+  filter(SpCode6 %in% label_spp) %>%
+  mutate(
+    x = minWP,
+    y = (1 / model1.int) * 100
+  ) %>%
+  group_by(SpCode6) %>%
+  slice(1) %>%
+  ungroup()
+
+# right-side labels
+spres_lab_other <- spres_lab %>% filter(!SpCode6 %in% special)
+if (nrow(spres_lab_other) > 0) {
+  text(
+    x = spres_lab_other$x,
+    y = spres_lab_other$y,
+    labels = spres_lab_other$SpCode6,
+    pos = 4,
+    offset = 0.3,
+    cex = 0.75,
+    col = species_cols[spres_lab_other$SpCode6]
+  )
+}
+
+# special labels above point
+spres_lab_special <- spres_lab %>% filter(SpCode6 %in% special)
+if (nrow(spres_lab_special) > 0) {
+  text(
+    x = spres_lab_special$x,
+    y = spres_lab_special$y,
+    labels = spres_lab_special$SpCode6,
+    pos = 3,
+    offset = 0.45,
+    adj = c(0.5, 0),
+    cex = 0.75,
+    col = species_cols[spres_lab_special$SpCode6]
+  )
+}
+
+# ----------------------------
+# Legend (to the right)
+# ----------------------------
+usr <- par("usr")   # c(xmin, xmax, ymin, ymax)
+pin <- par("pin")   # plot dimensions in inches
+x_per_inch <- diff(usr[1:2]) / pin[1]
+x_shift <- 0.9 * x_per_inch  # ~0.9 inch to the right
+
+legend(
+  x = usr[2] + x_shift,
+  y = usr[4],
+  xjust = 1, yjust = 1,
+  legend = species_levels,
+  pch = 16,
+  col = species_cols[species_levels],
+  bty = "n",
+  cex = 0.7,
+  title = "Species"
+)
+
+par(op)
+dev.off()
+```
+
+#####Colored by dec/evergreen
+
+
+
+```{r}
+# ============================
+# Conceptual curves + species points (base R)
+#   - builds spres from concept_params_df
+#   - joins Genus from SpCodes
+#   - draws conceptual isoclines + species points colored by leaf habit (dec_ever)
+#   - labels selected species (1 label per species)
+#   - writes a JPEG to /figures
+# ============================
+
+library(dplyr)
+library(here)
+
+# ----------------------------
+# Required helper (you said you already have this)
+# ----------------------------
+# solveForX <- function(cs, yval = 0.7) {
+#   # y = m*x + b
+#   return((yval - cs[1]) / cs[2])
+# }
+
+# ----------------------------
+# Leaf Habit color palette (named vector)
+# ----------------------------
+color_habit <- c(
+  "Dec"   = "#df8d71",  # Nice terracotta red for Deciduous
+  "Ever"  = "#1e5a46"   # Nice deep forest green for Evergreen
+)
+
+# ----------------------------
+# Build spres from parameters
+# ----------------------------
+spres <- concept_params_df %>%
+  filter(group == "grand") %>%
+  mutate(
+    model1.int = intercept,
+    model1.slp = slope,
+    SpCode6    = species,
+    minWP      = minwp,
+    dec_ever   = dec_ever  # Pulling leaf habit into our plotting dataframe
+  ) %>%
+  left_join(SpCodes %>% select(SpCode6, Genus), by = "SpCode6")
+
+if (any(is.na(spres$Genus))) {
+  warning("Some SpCode6 have no Genus in SpCodes: ",
+          paste(unique(spres$SpCode6[is.na(spres$Genus)]), collapse = ", "))
+}
+
+# ----------------------------
+# Species colors aligned to data (for text labels only)
+# ----------------------------
+color_species <- c(
+  ABICON = "#17154f", ADEFAS = "#2f357c", ARBMEN = "#6c5d9e", ARCGLA = "#9d9cd5",
+  ARCPAT = "#b0799a", CALDEC = "#59385c", CEACOR = "#f6b3b0", CEACUN = "#f6b3b0",
+  CEAPAR = "#b38711", CEASPI = "#e48171", CERBET = "#d8b847", ERIFAS = "#bf3729",
+  HETARB = "#e69b00", MALLAU = "#f5bb50", PINJEF = "#ada43b", PSEMEN = "#355828",
+  QUEAGR = "#5b859e", QUEBER = "#1e395f", QUEDOU = "#75884b", QUEDUR = "#1e5a46",
+  QUEGAR = "#df8d71", QUEKEL = "#af4f2f", SALLEU = "#d48f90", SALMEL = "#732f30",
+  UMBCAL = "#d8b847"
+)
+
+species_levels <- sort(unique(spres$SpCode6))
+species_cols <- color_species[species_levels]
+species_cols[is.na(species_cols)] <- "grey50"
+names(species_cols) <- species_levels
+
+# ----------------------------
+# Generate conceptual curves
+# ----------------------------
+# Standard vector for Maroon and Goldenrod lines (caps at 350% LFM)
+ilfm.sat.vec <- seq(1 / 3.5, 1.25, length.out = 31)
+
+# Custom vector for the Green line: starts at 350% LFM (1/3.5) 
+# and ends exactly where x = 0 (which is 1 / 0.88)
+ilfm.sat.vec.green <- seq(1 / 3.5, 1 / 0.88, length.out = 31)
+
+# "Typical" slope for conceptual lines
+species_slope <- median(spres$model1.slp, na.rm = TRUE)
+
+# Base y scales corresponding to ilfm values
+lfm_pct       <- (1 / ilfm.sat.vec) * 100
+lfm_pct_green <- (1 / ilfm.sat.vec.green) * 100
+
+make_MWPcrit <- function(thresh, ilfm_vec, slope) {
+  out <- numeric(length(ilfm_vec))
+  for (i in seq_along(ilfm_vec)) {
+    out[i] <- solveForX(c(ilfm_vec[i], slope), 1 / thresh)
+  }
+  out
+}
+
+MWPcrit_60 <- make_MWPcrit(0.62, ilfm.sat.vec, species_slope)
+MWPcrit_77 <- make_MWPcrit(0.77, ilfm.sat.vec, species_slope)
+MWPcrit_88 <- make_MWPcrit(0.88, ilfm.sat.vec.green, species_slope) # Uses green vector
+
+# ----------------------------
+# Plot open
+# ----------------------------
+jpeg(
+  filename = here("figures", "Fig2_species.jpg"),
+  width = 7,
+  height = 4.5,
+  units = "in",
+  res = 300
+)
+
+op <- par(no.readonly = TRUE)
+par(mar = c(4, 4, 0.5, 7), mgp = c(2.2, 0.6, 0), xpd = TRUE)
+
+# ----------------------------
+# Set up plot (axes only)
+# ----------------------------
+plot(
+  x = MWPcrit_60, y = lfm_pct,
+  xlim = c(-8, 0.2), ylim = c(0, 400),
+  type = "n",
+  xlab = "Minimum Midday Water Potential (MPa)",
+  ylab = "LFM (%) @ Midday Water Potential = 0",
+  yaxt = "n"
+)
+axis(2, at = seq(0, 400, 50), labels = seq(0, 400, 50), las = 1)
+
+# ----------------------------
+# Draw conceptual curves
+# ----------------------------
+lines(MWPcrit_60, lfm_pct, lwd = 1.5, col = "maroon")
+text(MWPcrit_60[1], lfm_pct[1],
+     labels = "62% LFM", pos = 3, col = "maroon", cex = 0.9)
+
+lines(MWPcrit_77, lfm_pct, lwd = 1.5, col = "goldenrod")
+text(MWPcrit_77[1], lfm_pct[1],
+     labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.9)
+
+lines(MWPcrit_88, lfm_pct_green, lwd = 1.5, col = "forestgreen")
+text(MWPcrit_88[1], lfm_pct_green[1],
+     labels = "88% LFM", pos = 4, col = "forestgreen", cex = 0.9)
+
+# ----------------------------
+# Plot points (colored by leaf habit)
+# ----------------------------
+points(
+  x = spres$minWP,
+  y = (1 / spres$model1.int) * 100,
+  pch = 16,
+  cex = 1.1,
+  col = color_habit[spres$dec_ever] # Updated mapping to leaf habit colors
+)
+
+# ----------------------------
+# Labels for selected species (one label per species)
+# ----------------------------
+label_spp <- c("PSEMEN", "UMBCAL", "ABCO", "PIJE", "PINJEF", "ABICON",
+               "CALDEC")
+
+special <- c("PIJE", "PINJEF", "CALDEC", "QUEKEL", "CEACOR")
+
+spres_lab <- spres %>%
+  filter(SpCode6 %in% label_spp) %>%
+  mutate(
+    x = minWP,
+    y = (1 / model1.int) * 100
+  ) %>%
+  group_by(SpCode6) %>%
+  slice(1) %>%
+  ungroup()
+
+# right-side labels
+spres_lab_other <- spres_lab %>% filter(!SpCode6 %in% special)
+if (nrow(spres_lab_other) > 0) {
+  text(
+    x = spres_lab_other$x,
+    y = spres_lab_other$y,
+    labels = spres_lab_other$SpCode6,
+    pos = 4,
+    offset = 0.3,
+    cex = 0.75,
+    col = species_cols[spres_lab_other$SpCode6]
+  )
+}
+
+# special labels above point
+spres_lab_special <- spres_lab %>% filter(SpCode6 %in% special)
+if (nrow(spres_lab_special) > 0) {
+  text(
+    x = spres_lab_special$x,
+    y = spres_lab_special$y,
+    labels = spres_lab_special$SpCode6,
+    pos = 3,
+    offset = 0.45,
+    adj = c(0.5, 0),
+    cex = 0.75,
+    col = species_cols[spres_lab_special$SpCode6]
+  )
+}
+
+# ----------------------------
+# Legend (to the right, updated for Leaf Habit)
+# ----------------------------
+usr <- par("usr")   # c(xmin, xmax, ymin, ymax)
+pin <- par("pin")   # plot dimensions in inches
+x_per_inch <- diff(usr[1:2]) / pin[1]
+x_shift <- 0.9 * x_per_inch  # ~0.9 inch to the right
+
+legend(
+  x = usr[2] + x_shift,
+  y = usr[4],
+  xjust = 1, yjust = 1,
+  legend = c("Deciduous", "Evergreen"), # Clear, publication-ready labels
+  pch = 16,
+  col = color_habit[c("Dec", "Ever")],
+  bty = "n",
+  cex = 0.8,
+  title = "Leaf Habit"
+)
+
+par(op)
+dev.off()
+```
+
+####Growth form:
+
+
+```{r}
+# ============================
+# Conceptual curves + species points (base R)
+#   - builds spres from concept_params_df
+#   - joins Genus from SpCodes
+#   - draws conceptual isoclines + species points colored by growth form
+#   - labels selected species (1 label per species)
+#   - writes a JPEG to /figures
+# ============================
+
+library(dplyr)
+library(here)
+
+# ----------------------------
+# Required helper (you said you already have this)
+# ----------------------------
+# solveForX <- function(cs, yval = 0.7) {
+#   # y = m*x + b
+#   return((yval - cs[1]) / cs[2])
+# }
+
+# ----------------------------
+# Growth Form color palette (named vector)
+# ----------------------------
+color_growth <- c(
+  "tree"  = "#1e395f",  # Deep slate blue for trees
+  "shrub" = "#d8b847"   # Warm golden-yellow for shrubs
+)
+
+# ----------------------------
+# Build spres from parameters
+# ----------------------------
+spres <- concept_params_df %>%
+  filter(group == "grand") %>%
+  mutate(
+    model1.int  = intercept,
+    model1.slp  = slope,
+    SpCode6     = species,
+    minWP       = minwp,
+    growth_form = growth_form  # Pulling growth form into our plotting dataframe
+  ) %>%
+  left_join(SpCodes %>% select(SpCode6, Genus), by = "SpCode6")
+
+if (any(is.na(spres$Genus))) {
+  warning("Some SpCode6 have no Genus in SpCodes: ",
+          paste(unique(spres$SpCode6[is.na(spres$Genus)]), collapse = ", "))
+}
+
+# ----------------------------
+# Species colors aligned to data (for text labels only)
+# ----------------------------
+color_species <- c(
+  ABICON = "#17154f", ADEFAS = "#2f357c", ARBMEN = "#6c5d9e", ARCGLA = "#9d9cd5",
+  ARCPAT = "#b0799a", CALDEC = "#59385c", CEACOR = "#f6b3b0", CEACUN = "#f6b3b0",
+  CEAPAR = "#b38711", CEASPI = "#e48171", CERBET = "#d8b847", ERIFAS = "#bf3729",
+  HETARB = "#e69b00", MALLAU = "#f5bb50", PINJEF = "#ada43b", PSEMEN = "#355828",
+  QUEAGR = "#5b859e", QUEBER = "#1e395f", QUEDOU = "#75884b", QUEDUR = "#1e5a46",
+  QUEGAR = "#df8d71", QUEKEL = "#af4f2f", SALLEU = "#d48f90", SALMEL = "#732f30",
+  UMBCAL = "#d8b847"
+)
+
+species_levels <- sort(unique(spres$SpCode6))
+species_cols <- color_species[species_levels]
+species_cols[is.na(species_cols)] <- "grey50"
+names(species_cols) <- species_levels
+
+# ----------------------------
+# Generate conceptual curves
+# ----------------------------
+# Standard vector for Maroon and Goldenrod lines (caps at 350% LFM)
+ilfm.sat.vec <- seq(1 / 3.5, 1.25, length.out = 31)
+
+# Custom vector for the Green line: starts at 350% LFM (1/3.5) 
+# and ends exactly where x = 0 (which is 1 / 0.88)
+ilfm.sat.vec.green <- seq(1 / 3.5, 1 / 0.88, length.out = 31)
+
+# "Typical" slope for conceptual lines
+species_slope <- median(spres$model1.slp, na.rm = TRUE)
+
+# Base y scales corresponding to ilfm values
+lfm_pct       <- (1 / ilfm.sat.vec) * 100
+lfm_pct_green <- (1 / ilfm.sat.vec.green) * 100
+
+make_MWPcrit <- function(thresh, ilfm_vec, slope) {
+  out <- numeric(length(ilfm_vec))
+  for (i in seq_along(ilfm_vec)) {
+    out[i] <- solveForX(c(ilfm_vec[i], slope), 1 / thresh)
+  }
+  out
+}
+
+MWPcrit_60 <- make_MWPcrit(0.62, ilfm.sat.vec, species_slope)
+MWPcrit_77 <- make_MWPcrit(0.77, ilfm.sat.vec, species_slope)
+MWPcrit_88 <- make_MWPcrit(0.88, ilfm.sat.vec.green, species_slope) # Uses green vector
+
+# ----------------------------
+# Plot open
+# ----------------------------
+jpeg(
+  filename = here("figures", "Fig2_species.jpg"),
+  width = 7,
+  height = 4.5,
+  units = "in",
+  res = 300
+)
+
+op <- par(no.readonly = TRUE)
+par(mar = c(4, 4, 0.5, 7), mgp = c(2.2, 0.6, 0), xpd = TRUE)
+
+# ----------------------------
+# Set up plot (axes only)
+# ----------------------------
+plot(
+  x = MWPcrit_60, y = lfm_pct,
+  xlim = c(-8, 0.2), ylim = c(0, 400),
+  type = "n",
+  xlab = "Minimum Midday Water Potential (MPa)",
+  ylab = "LFM (%) @ Midday Water Potential = 0",
+  yaxt = "n"
+)
+axis(2, at = seq(0, 400, 50), labels = seq(0, 400, 50), las = 1)
+
+# ----------------------------
+# Draw conceptual curves
+# ----------------------------
+lines(MWPcrit_60, lfm_pct, lwd = 1.5, col = "maroon")
+text(MWPcrit_60[1], lfm_pct[1],
+     labels = "62% LFM", pos = 3, col = "maroon", cex = 0.9)
+
+lines(MWPcrit_77, lfm_pct, lwd = 1.5, col = "goldenrod")
+text(MWPcrit_77[1], lfm_pct[1],
+     labels = "77% LFM", pos = 3, col = "goldenrod", cex = 0.9)
+
+lines(MWPcrit_88, lfm_pct_green, lwd = 1.5, col = "forestgreen")
+text(MWPcrit_88[1], lfm_pct_green[1],
+     labels = "88% LFM", pos = 4, col = "forestgreen", cex = 0.9)
+
+# ----------------------------
+# Plot points (colored by growth form)
+# ----------------------------
+points(
+  x = spres$minWP,
+  y = (1 / spres$model1.int) * 100,
+  pch = 16,
+  cex = 1.1,
+  col = color_growth[spres$growth_form] # Mapping to growth form colors
+)
+
+# ----------------------------
+# Labels for selected species (one label per species)
+# ----------------------------
+label_spp <- c("PSEMEN", "UMBCAL", "ABCO", "PIJE", "PINJEF", "ABICON",
+               "CALDEC")
+
+special <- c("PIJE", "PINJEF", "CALDEC", "QUEKEL", "CEACOR")
+
+spres_lab <- spres %>%
+  filter(SpCode6 %in% label_spp) %>%
+  mutate(
+    x = minWP,
+    y = (1 / model1.int) * 100
+  ) %>%
+  group_by(SpCode6) %>%
+  slice(1) %>%
+  ungroup()
+
+# right-side labels
+spres_lab_other <- spres_lab %>% filter(!SpCode6 %in% special)
+if (nrow(spres_lab_other) > 0) {
+  text(
+    x = spres_lab_other$x,
+    y = spres_lab_other$y,
+    labels = spres_lab_other$SpCode6,
+    pos = 4,
+    offset = 0.3,
+    cex = 0.75,
+    col = species_cols[spres_lab_other$SpCode6]
+  )
+}
+
+# special labels above point
+spres_lab_special <- spres_lab %>% filter(SpCode6 %in% special)
+if (nrow(spres_lab_special) > 0) {
+  text(
+    x = spres_lab_special$x,
+    y = spres_lab_special$y,
+    labels = spres_lab_special$SpCode6,
+    pos = 3,
+    offset = 0.45,
+    adj = c(0.5, 0),
+    cex = 0.75,
+    col = species_cols[spres_lab_special$SpCode6]
+  )
+}
+
+# ----------------------------
+# Legend (to the right, updated for Growth Form)
+# ----------------------------
+usr <- par("usr")   # c(xmin, xmax, ymin, ymax)
+pin <- par("pin")   # plot dimensions in inches
+x_per_inch <- diff(usr[1:2]) / pin[1]
+x_shift <- 0.9 * x_per_inch  # ~0.9 inch to the right
+
+legend(
+  x = usr[2] + x_shift,
+  y = usr[4],
+  xjust = 1, yjust = 1,
+  legend = c("Tree", "Shrub"), # Capitalized, publication-ready labels
+  pch = 16,
+  col = color_growth[c("tree", "shrub")],
+  bty = "n",
+  cex = 0.8,
+  title = "Growth Form"
+)
+
+par(op)
+dev.off()
+```
+
+
+
+
+

@@ -48,3 +48,7 @@ vignettes/*.pdf
 Reports/
 Reports/*.*
 Reports
+
+#Images
+*.jpg
+.jpg
