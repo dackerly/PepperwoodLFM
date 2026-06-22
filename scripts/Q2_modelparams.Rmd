@@ -3119,6 +3119,8 @@ q3_df1 <- merge(traits_df, concept_params_df, #by = c("species", "sp_code", "gro
 
 ####Figure 5.* (P50 x model parameters)
 ```{r}
+q3_df <- q3_df1
+
 q3_df_salvias <- q3_df %>% filter(species %in% c("SALLEU", "SALMEL"))
 q3_df_outs    <- q3_df %>% filter(!(species %in% c("SALLEU", "SALMEL")))
 
@@ -3141,7 +3143,7 @@ model <- lm(plc50_stem ~ min_mwp, data = q3_df)
 
 fig5a <- ggplot() +
   geom_point(data = q3_df, aes(x = min_mwp, y = plc50_stem, color = species)) +
-  color_species +
+  scale_color_manual(values = color_species) +
   geom_smooth(data = q3_df, aes(x = min_mwp, y = plc50_stem),
               method = "lm", se = FALSE, color = "black") +
   labs(
@@ -3158,7 +3160,7 @@ model <- lm(plc50_stem ~ min_lfm, data = q3_df)
 
 fig5b <- ggplot() +
   geom_point(data = q3_df, aes(x = min_lfm, y = plc50_stem, color = species)) +
-  color_species +
+   scale_color_manual(values = color_species) +
   geom_smooth(data = q3_df, aes(x = min_lfm, y = plc50_stem),
               method = "lm", se = FALSE, color = "black") +
   labs(

@@ -1763,6 +1763,121 @@ ggplot(df_pred, aes(x = lfm, y = lfm_pred, color = species,
 
 #Model figs (Fig 3)
 
+#Figure 3: 
+
+```{r}
+color_species_selected <- scale_color_manual(
+  values = c(
+     ABICON = "#5b859e",
+     ADEFAS = "#2f357c",
+     CALDEC = "#59385c",
+     CEAPAR = "#b38711",
+     ERIFAS = "#bf3729",
+     HETARB = "#e69b00",
+     MALLAU = "#f5bb50",
+     PINJEF = "#ada43b",
+     QUEDUR = "#1e5a46",
+     SALLEU = "#d48f90",
+     UMBCAL = "#d8b847"
+  ),
+  drop = FALSE
+)
+
+concept_slopes_df <- concept_both_df %>%
+  filter(group == "species") %>% 
+  filter(sp_code6 %in% c("PINJEF", 
+                         "QUEDUR",
+                         "SALLEU",
+                         "ABICON",
+                         "CEAPAR",
+                         "ERIFAS",
+                        "UMBCAL",
+                        "CALDEC",
+                        "MALLAU",
+                        "HETARB",
+                        "ARCGLA",
+                        "ADEFAS"
+                         ))
+
+model_lines <- concept_slopes_df  %>% 
+  merge(table1_df)%>% 
+  distinct(species, intercept, slope, family)  %>%
+  left_join(
+    concept_slopes_df %>%
+      group_by(species) %>%
+      summarise(
+        abs_min = min(abs(mwp), na.rm = TRUE),
+        abs_max = max(abs(mwp), na.rm = TRUE),   
+        sign_mwp = sign(stats::median(mwp, na.rm = TRUE)),
+        .groups = "drop"
+      ) %>%
+      mutate(sign_mwp = if_else(sign_mwp == 0, -1, sign_mwp)), 
+    by = "species"
+  ) %>%
+  rowwise() %>%
+  mutate(abs_mwp = list(seq(abs_min, abs_max, length.out = 100))) %>%
+  tidyr::unnest(abs_mwp) %>%
+  ungroup() %>%
+  mutate(
+    mwp = sign_mwp * abs_mwp,
+    ilfm_pred = intercept + slope * mwp
+  ) 
+
+figSXa <- ggplot(concept_slopes_df , aes(x = mwp, y = ilfm)) +
+  geom_point(aes(color = species), alpha = 0.8, size = .7) +  
+  geom_line(data = model_lines, aes(x = mwp, y = ilfm_pred, color = species), size = 0.5) +  
+  color_species_selected + 
+  labs(
+    x = expression(Psi[MDmin]~"(MPa)"),
+    y = "1/LFM",
+    color = "Study"
+  ) +
+  theme(
+    legend.position = "false",
+    aspect.ratio = 1
+  ) 
+
+figSXb <- ggplot(concept_slopes_df , aes(x = mwp, y = lfm*100)) +
+  geom_point(aes(color = species), alpha = 0.8, size = .7) +  
+  geom_line(data = model_lines, aes(x = mwp, y = 100*(1/ilfm_pred), color = species), size = .5) +  
+  color_species_selected + 
+  labs(
+    x = expression(Psi[MDmin]~"(MPa)"),
+    y = "LFM (%)"
+  ) +
+  theme(
+    legend.position = "false",
+    aspect.ratio = 1
+  )
+
+legend <- cowplot::get_legend(
+  ggplot(concept_slopes_df, aes(x = mwp, y = ilfm, color = species)) +
+    geom_line(size = 0.5) +
+    labs(color = "Species") +
+    theme_minimal() +
+    color_species_selected
+) 
+
+# Combine the two square plots side-by-side
+fig_panels <- cowplot::plot_grid(figSXb, figSXa, ncol = 2, rel_widths = c(1, 1))
+
+# Combine panels with legend and adjust label margins so they don't overlap
+figSX <- cowplot::plot_grid(fig_panels, legend, ncol = 2, rel_widths = c(1, 0.2)) +
+  cowplot::draw_plot_label(
+    label = c("A", "B"),
+    x = c(0.001, 0.401),
+    y = c(0.99, 0.99),
+    size = 16,
+    fontface = "bold"
+  )
+
+figSX
+
+# Height lowered slightly to perfectly match the square aspect ratio geometry
+ggsave(plot = figSX, here::here("figures", "figSX_selectspp.jpg"), dpi = 600, height = 3.5, width = 8, units = "in")
+```
+#----------
+
 #####Figure 3. (models)
 ```{r, fig.height=5, fig.width=7}
 color_manual <- scale_color_manual(values  = c(
@@ -2270,6 +2385,8 @@ figSX
 
 ggsave(plot = figSX, here::here("figures", "figSX_selectspp.jpg"), dpi = 600, height = 4, width = 5, units = "in")
 ```
+
+
 
 ####Figure S1., colored by species
 ```{r, figure1}
