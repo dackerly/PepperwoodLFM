@@ -52,3 +52,6 @@ Reports
 #Images
 *.jpg
 .jpg
+
+# Literature
+literature/

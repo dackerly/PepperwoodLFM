@@ -1,7 +1,0 @@
-"effect","group","term","estimate","std.error","statistic","df","p.value","formula"
-"fixed",NA,"(Intercept)",0.547145662324428,0.0451343359385831,12.1226035776612,30.6689476819155,3.1347524772856e-13,"ilfm ~ mwp * group + (1 | species)"
-"fixed",NA,"mwp",-0.201343371623026,0.00540578393342812,-37.2459155050511,1049.84895560631,3.33689678602712e-194,"ilfm ~ mwp * group + (1 | species)"
-"fixed",NA,"groupGymnosperm",0.332705895702651,0.119226558952253,2.79053508401505,38.24388599688,0.00816397323308113,"ilfm ~ mwp * group + (1 | species)"
-"fixed",NA,"mwp:groupGymnosperm",0.253156811259898,0.0276296605747707,9.16250167369273,1041.69438508201,2.62522968865099e-19,"ilfm ~ mwp * group + (1 | species)"
-"ran_pars","species","sd__(Intercept)",0.187613969248513,NA,NA,NA,NA,"ilfm ~ mwp * group + (1 | species)"
-"ran_pars","Residual","sd__Observation",0.210927447477485,NA,NA,NA,NA,"ilfm ~ mwp * group + (1 | species)"
