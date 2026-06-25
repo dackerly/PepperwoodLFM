@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/user/Desktop/github/pepperwood-lfm/R /Users/user/Desktop/github/pepperwood-lfm/data/raw /Users/user/Desktop/github/pepperwood-lfm/data/other_studies /Users/user/Desktop/github/pepperwood-lfm/output/figures/main /Users/user/Desktop/github/pepperwood-lfm/output/figures/SI /Users/user/Desktop/github/pepperwood-lfm/output/tables)"
+    ],
+    "additionalDirectories": [
+      "/Users/user/Desktop/github/pepperwood-lfm"
+    ]
+  }
+}
