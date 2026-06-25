@@ -55,3 +55,14 @@ Reports
 
 # Literature
 literature/
+
+# Generated outputs (regenerate from scripts + data)
+figures/
+results/
+results_final/
+
+# Claude Code workflow files
+CLAUDE.md
+docs/session-log.md
+docs/tasks.md
+docs/literature-notes.md
